@@ -25,8 +25,26 @@ contract ERC721GACWrapper is ERC721GAC {
         _mint(to, quantity, "", safe, isPrivate);
     }
 
+    function mintWithData(
+        address to,
+        uint64 quantity,
+        bytes calldata data,
+        bool safe,
+        bool isPrivate
+    ) external {
+        _mint(to, quantity, data, safe, isPrivate);
+    }
+
     function burn(uint64 tokenId) external {
         _burn(tokenId);
+    }
+
+    function publicMintCount(address user) external view returns (uint256) {
+        return _numberMintedPublic(user);
+    }
+
+    function privateMintCount(address user) external view returns (uint256) {
+        return _numberMintedPrivate(user);
     }
 
     /**
@@ -37,5 +55,4 @@ contract ERC721GACWrapper is ERC721GAC {
     function _baseURI() internal override view virtual returns (string memory) {
         return _baseUri;
     }
-
 }

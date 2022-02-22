@@ -4,6 +4,8 @@ const truffleAssert = require('truffle-assertions');
 const ERC721GAC = artifacts.require('ERC721GACWrapper');
 const ERC721Reciever = artifacts.require('TestERC721Receiver');
 
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+
 contract('ERC721GAC', (accounts) => {
     const buildInstance = (
         name = 'test',
@@ -188,10 +190,7 @@ contract('ERC721GAC', (accounts) => {
         await instance.approve(accounts[2], 1);
         assert.equal(await instance.getApproved(0), accounts[1]);
         assert.equal(await instance.getApproved(1), accounts[2]);
-        assert.equal(
-            await instance.getApproved(2),
-            '0x0000000000000000000000000000000000000000'
-        );
+        assert.equal(await instance.getApproved(2), ZERO_ADDRESS);
     });
 
     it('calls setApprovalForAll/isApprovedForAll', async () => {
@@ -211,7 +210,7 @@ contract('ERC721GAC', (accounts) => {
         );
     });
 
-    it.only('calls transferFrom', async () => {
+    it('calls transferFrom (_transfer)', async () => {
         const notReciever = await ERC721GAC.new('', '', '');
 
         const instance = await buildInstance();
@@ -237,11 +236,7 @@ contract('ERC721GAC', (accounts) => {
 
         // fails if trying to burn
         await truffleAssert.fails(
-            instance.transferFrom(
-                accounts[0],
-                '0x0000000000000000000000000000000000000000',
-                0
-            )
+            instance.transferFrom(accounts[0], ZERO_ADDRESS, 0)
         );
 
         // succeeds if called by owner (token 0)
@@ -265,5 +260,137 @@ contract('ERC721GAC', (accounts) => {
         // succeeds on a non-receiver (token 3)
         await instance.transferFrom(accounts[0], notReciever.address, 3);
         assert.equal(await instance.ownerOf(3), notReciever.address);
+
+        // check balances
+        assert.equal((await instance.balanceOf(accounts[0])).toString(), '6');
+        assert.equal((await instance.balanceOf(accounts[1])).toString(), '3');
+        assert.equal(
+            (await instance.balanceOf(notReciever.address)).toString(),
+            '1'
+        );
+
+        // resets approvals
+        assert.equal(await instance.getApproved(2), ZERO_ADDRESS);
+    });
+
+    it('calls safeTransferFrom', async () => {
+        const instance = await buildInstance();
+        const receiver = await ERC721Reciever.new();
+
+        await instance.mint(accounts[0], 10, true, false);
+
+        // fails when data is not empty
+        await truffleAssert.fails(
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (instance as any).safeTransferFrom(
+                accounts[0],
+                receiver.address,
+                0,
+                '0x5d2f5bbd'
+            )
+        );
+
+        // succeeds when data is empty (token 0)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (instance as any).safeTransferFrom(accounts[0], receiver.address, 0);
+    });
+
+    it('calls mint (_mint)', async () => {
+        const receiver = await ERC721Reciever.new();
+        const instance = await buildInstance();
+
+        // fails minting to zero address
+        await truffleAssert.fails(instance.mint(ZERO_ADDRESS, 10, true, false));
+
+        // fails minting zero tokens
+        await truffleAssert.fails(instance.mint(accounts[0], 0, true, false));
+
+        // succeeds minting one (public, unsafe)
+        await instance.mint(accounts[0], 1, false, false);
+        // succeeds minting one (public, safe)
+        await instance.mint(accounts[0], 1, true, false);
+        // succeeds minting one (private, unsafe)
+        await instance.mint(accounts[0], 1, false, true);
+        // succeeds minting two (private, safe)
+        await instance.mint(accounts[0], 2, true, true);
+
+        // assert balance changed
+        assert.equal((await instance.balanceOf(accounts[0])).toString(), '5');
+
+        // assert owner set
+        assert.equal(await instance.ownerOf(0), accounts[0]);
+        assert.equal(await instance.ownerOf(1), accounts[0]);
+        assert.equal(await instance.ownerOf(2), accounts[0]);
+        assert.equal(await instance.ownerOf(3), accounts[0]);
+        assert.equal(await instance.ownerOf(4), accounts[0]);
+        await truffleAssert.fails(instance.ownerOf(5)); // doesn't exist
+
+        // assert mint counts set
+        assert.equal(
+            (await instance.privateMintCount(accounts[0])).toString(),
+            '3'
+        );
+        assert.equal(
+            (await instance.publicMintCount(accounts[0])).toString(),
+            '2'
+        );
+
+        // fails minting to receiver with data (safe)
+        await truffleAssert.fails(
+            instance.mintWithData(
+                receiver.address,
+                1,
+                '0x5d2f5bbd',
+                true,
+                false
+            )
+        );
+        // succeeds to receiver (unsafe)
+        await instance.mintWithData(
+            receiver.address,
+            1,
+            '0x5d2f5bbd',
+            false,
+            false
+        );
+        // succeeds to receiver (safe)
+        await instance.mint(receiver.address, 1, false, false);
+
+        assert.equal(
+            (await instance.balanceOf(receiver.address)).toString(),
+            '2'
+        );
+    });
+
+    it.only('calls burn', async () => {
+        const instance = await buildInstance();
+
+        // mint
+        await instance.mint(accounts[0], 10, true, false);
+        assert.equal((await instance.totalSupply()).toString(), '10');
+        assert.equal((await instance.balanceOf(accounts[0])).toString(), '10');
+
+        await instance.approve(accounts[1], 0);
+        assert.equal(await instance.getApproved(0), accounts[1]);
+
+        await instance.burn(0);
+
+        // decreases supply
+        assert.equal((await instance.totalSupply()).toString(), '9');
+
+        // removes existence
+        truffleAssert.fails(instance.ownerOf(0));
+        truffleAssert.fails(instance.getApproved(0));
+
+        // updates balance
+        assert.equal((await instance.balanceOf(accounts[0])).toString(), '9');
+
+        // mints continue
+        await instance.mint(accounts[0], 1, true, false);
+        assert.equal((await instance.balanceOf(accounts[0])).toString(), '10');
+        assert.equal(await instance.ownerOf(10), accounts[0]);
+
+        // fails on nonexistent token
+        await truffleAssert.fails(instance.burn(100));
     });
 });

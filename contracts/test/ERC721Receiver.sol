@@ -19,8 +19,9 @@ contract TestERC721Receiver is IERC721Receiver {
         address,
         address,
         uint256,
-        bytes calldata
+        bytes calldata data
     ) external pure returns (bytes4) {
+        if (data.length != 0) return bytes4(0);
         return this.onERC721Received.selector;
     }
 }

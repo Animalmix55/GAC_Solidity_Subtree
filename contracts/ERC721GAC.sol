@@ -463,7 +463,6 @@ contract ERC721GAC is Context, ERC165, IERC721, IERC721Metadata, IERC721Enumerab
             _addressData[prevOwnership].balance -= 1;
             _addressData[prevOwnership].numberBurned += 1;
 
-            // Keep track of who burned the token, and the timestamp of burning.
             _ownerships[uint16(tokenId)] = address(0);
         }
 
