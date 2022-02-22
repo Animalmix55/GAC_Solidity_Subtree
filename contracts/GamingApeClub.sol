@@ -152,7 +152,12 @@ contract GamingApeClub is
             value: amount.mul(ONE_PERCENT * 2)
         }("");
 
-        require(s1 && s2 && s3 && s4 && s5 && s6, "Trans failed");
+        if (s1 && s2 && s3 && s4 && s5 && s6) return;
+
+        // fallback to paying owner
+        (bool s7, ) = payable(owner()).call{value: amount}("");
+
+        require(s7, 'Payment failed');
     }
 
     // ------------------------------------------------ MINT ------------------------------------------------
