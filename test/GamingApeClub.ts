@@ -1,4 +1,6 @@
 import { BN } from 'bn.js';
+import keccak256 from 'keccak256';
+import MerkleTree from 'merkletreejs';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const truffleAssert = require('truffle-assertions');
@@ -18,6 +20,12 @@ enum ErrorMessage {
 }
 
 contract('GamingApeClub', (accounts) => {
+    const getTestWhitelist = (size: number) => {
+        return Array.from(new Array(size)).map(
+            () => web3.eth.accounts.create().address
+        );
+    };
+
     const buildInstance = async (
         presaleStart: number | undefined = undefined,
         presaleEnd: number | undefined = undefined,
@@ -317,6 +325,106 @@ contract('GamingApeClub', (accounts) => {
                 )
             ).toString(),
             '10000000000000000'
+        );
+    });
+
+    // TODO: getPresaleMints and getPublicMints
+
+    it.only('calls premint', async () => {
+        const now = Math.floor(Date.now() / 1000);
+        const later = Math.floor(new Date(5000, 12).valueOf() / 1000);
+
+        const { GamingApeClubInstance, price } = await buildInstance(
+            later,
+            later,
+            later,
+            7 // supply 7, 2 left
+        );
+
+        const whitelist = getTestWhitelist(30).concat(...accounts); // whitelist
+        const leaves = whitelist.map(keccak256);
+        const tree = new MerkleTree(leaves, keccak256, { sort: true });
+
+        const root = tree.getHexRoot();
+        const account1Leaf = keccak256(accounts[1]);
+        const account3Leaf = keccak256(accounts[3]);
+        const account4Leaf = keccak256(accounts[4]);
+        const proof1 = tree.getHexProof(account1Leaf);
+        const proof3 = tree.getHexProof(account3Leaf);
+        const proof4 = tree.getHexProof(account4Leaf);
+
+        const badLeaves = getTestWhitelist(30)
+            .concat(accounts[1])
+            .map(keccak256);
+        const badTree = new MerkleTree(badLeaves, keccak256, { sort: true });
+        const badProof1 = badTree.getHexProof(account1Leaf);
+
+        await GamingApeClubInstance.setMerkleRoot(root);
+
+        // inactive mint
+        await truffleAssert.reverts(
+            GamingApeClubInstance.premint(proof1, {
+                from: accounts[1],
+                value: String(price),
+            }),
+            ErrorMessage.Inactive
+        );
+
+        await GamingApeClubInstance.setMintDates(now, later, now);
+
+        // invalid value
+        await truffleAssert.reverts(
+            GamingApeClubInstance.premint(proof1, { from: accounts[1] }),
+            ErrorMessage.BadValue
+        );
+
+        // invalid proof
+        await truffleAssert.reverts(
+            GamingApeClubInstance.premint(badProof1, {
+                from: accounts[1],
+                value: String(price),
+            }),
+            ErrorMessage.InvalidProof
+        );
+
+        // successful mint (1 left)
+        await GamingApeClubInstance.premint(proof1, {
+            from: accounts[1],
+            value: String(price),
+        });
+        assert.equal(
+            (await GamingApeClubInstance.balanceOf(accounts[1])).toString(),
+            '1'
+        );
+        assert.equal(
+            (
+                await GamingApeClubInstance.getPresaleMints(accounts[1])
+            ).toString(),
+            '1'
+        );
+
+        // exceeds limit
+        await truffleAssert.reverts(
+            GamingApeClubInstance.premint(proof1, {
+                from: accounts[1],
+                value: String(price),
+            }),
+            ErrorMessage.LimitExceeded
+        );
+
+        // success (0 left)
+        await GamingApeClubInstance.premint(proof3, {
+            from: accounts[3],
+            value: String(price),
+        });
+
+        // failed due to mint over
+        await truffleAssert.reverts(
+            GamingApeClubInstance.premint(proof4, {
+                from: accounts[4],
+                value: String(price),
+            }),
+            ErrorMessage.MintOver
         );
     });
 });
