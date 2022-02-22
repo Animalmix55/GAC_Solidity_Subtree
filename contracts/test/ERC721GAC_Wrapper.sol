@@ -17,22 +17,24 @@ contract ERC721GACWrapper is ERC721GAC {
     }
 
     function mint(
+        address from,
         address to,
         uint64 quantity,
         bool safe,
         bool isPrivate
     ) external {
-        _mint(to, quantity, "", safe, isPrivate);
+        _mint(from, to, quantity, "", safe, isPrivate);
     }
 
     function mintWithData(
+        address from,
         address to,
         uint64 quantity,
         bytes calldata data,
         bool safe,
         bool isPrivate
     ) external {
-        _mint(to, quantity, data, safe, isPrivate);
+        _mint(from, to, quantity, data, safe, isPrivate);
     }
 
     function burn(uint64 tokenId) external {

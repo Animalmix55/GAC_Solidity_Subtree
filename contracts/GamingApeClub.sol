@@ -9,7 +9,7 @@ import "./access/DeveloperAccess.sol";
 import "./MerkleProof.sol";
 import "./ERC721GAC.sol";
 
-contract GamingApeClub is ERC721GAC, Ownable, DeveloperAccess, ReentrancyGuard {
+contract GamingApeClub is ERC721GAC, MerkleProof, Ownable, DeveloperAccess, ReentrancyGuard {
     using PRBMathUD60x18 for uint256;
 
     uint256 private constant ONE_PERCENT = 10000000000000000; // 1% (18 decimals)
@@ -30,7 +30,7 @@ contract GamingApeClub is ERC721GAC, Ownable, DeveloperAccess, ReentrancyGuard {
         uint256 presaleMintEnd,
         uint256 publicMintStart
     ) ERC721GAC("Gaming Ape Club", "GAC") DeveloperAccess(devAddress) {
-        require(maxSupply > 0, "Zero supply");
+        require(maxSupply >= 5, "Bad supply");
 
         // GLOBALS
         maximumSupply = maxSupply;
@@ -42,6 +42,9 @@ contract GamingApeClub is ERC721GAC, Ownable, DeveloperAccess, ReentrancyGuard {
 
         // CONFIGURE PUBLIC MINT
         _publicStart = publicMintStart;
+
+        // MINT 5 AUCTION NFTS
+        ownerMint(5, msg.sender);
     }
 
     // -------------------------------------------- OWNER/DEV ONLY ----------------------------------------
@@ -66,9 +69,9 @@ contract GamingApeClub is ERC721GAC, Ownable, DeveloperAccess, ReentrancyGuard {
         uint256 remaining = maximumSupply - _currentIndex;
     
         require(remaining > 0, "Mint over");
-        require(quantity + remaining <= maximumSupply, "Mint over");
+        require(quantity <= remaining, "Not enough");
 
-        _safeMint(to, quantity, true);
+        _mint(owner(), to, quantity, '', true, true);
     }
 
     /**
@@ -176,7 +179,7 @@ contract GamingApeClub is ERC721GAC, Ownable, DeveloperAccess, ReentrancyGuard {
         );
 
         require(
-            MerkleProof.verify(
+            verify(
                 _merkleRoot,
                 keccak256(abi.encodePacked(msg.sender)),
                 proof
@@ -200,7 +203,7 @@ contract GamingApeClub is ERC721GAC, Ownable, DeveloperAccess, ReentrancyGuard {
 
         require(remaining > 0, "Mint over");
         require(block.timestamp >= _publicStart, "Inactive");
-        require(_numberMintedPublic(msg.sender) == 0, "Exceeds max");
+        require(_numberMintedPublic(msg.sender) == 0, "Limit exceeded");
         require(mintPrice == msg.value, "Invalid value");
 
         // DISTRIBUTE THE TOKENS
@@ -214,7 +217,7 @@ contract GamingApeClub is ERC721GAC, Ownable, DeveloperAccess, ReentrancyGuard {
      * @param tokenId - the ID of the token to be burned.
      */
     function burn(uint256 tokenId) public {
-        require(ownerOf(tokenId) == msg.sender, "You do not own this token");
+        require(ownerOf(tokenId) == msg.sender, "Not owner");
 
         _burn(tokenId);
     }

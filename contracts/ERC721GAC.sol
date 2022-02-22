@@ -342,11 +342,12 @@ contract ERC721GAC is Context, ERC165, IERC721, IERC721Metadata, IERC721Enumerab
         bytes memory _data,
         bool isPrivate
     ) internal {
-        _mint(to, quantity, _data, true, isPrivate);
+        _mint(to, to, quantity, _data, true, isPrivate);
     }
 
     /**
      * @dev Mints `quantity` tokens and transfers them to `to`.
+     *      Updates the number minted in the `from` account.
      *
      * Requirements:
      *
@@ -356,6 +357,7 @@ contract ERC721GAC is Context, ERC165, IERC721, IERC721Metadata, IERC721Enumerab
      * Emits a {Transfer} event.
      */
     function _mint(
+        address from,
         address to,
         uint256 quantity,
         bytes memory _data,
@@ -372,8 +374,8 @@ contract ERC721GAC is Context, ERC165, IERC721, IERC721Metadata, IERC721Enumerab
         unchecked {
             _addressData[to].balance += uint16(quantity);
 
-            if (isPrivate) _addressData[to].numberMintedPrivate += uint16(quantity);
-            else _addressData[to].numberMintedPublic += uint16(quantity);
+            if (isPrivate) _addressData[from].numberMintedPrivate += uint16(quantity);
+            else _addressData[from].numberMintedPublic += uint16(quantity);
 
             uint16 updatedIndex = startTokenId;
 

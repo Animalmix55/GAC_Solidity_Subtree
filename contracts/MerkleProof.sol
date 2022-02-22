@@ -2,9 +2,9 @@
 pragma solidity ^0.8.9;
 
 /**
- * A library designed to verify a given merkle leaf based on the provided merkle root and proof.
+ * A Contract designed to verify a given merkle leaf based on the provided merkle root and proof.
  */
-library MerkleProof {
+contract MerkleProof {
     /**
      * Verifies that a given leaf lives under the provided root based on the proof.
      * @param root - the root of the merkle tree (keccak hash)
