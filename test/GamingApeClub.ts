@@ -256,6 +256,21 @@ contract('GamingApeClub', (accounts) => {
             ErrorMessage.NotOwnerOrDev
         );
 
+        const disbursmentAddresses = [
+            '0x568bFbBD4F4e4CA9Fb15729A61E660786207e94f',
+            '0x7436F0949BCa6b6C6fD766b6b9AA57417B0314A9',
+            '0x13c4d22a8dbB2559B516E10FE0DE47ba4b4A03EB',
+            '0xB3D665d27A1AE8F2f3C32cB1178c9E749ce00714',
+            '0x470049b45A5f05c84e9285Cb467642733450acE5',
+            '0xcbFF601C8745a86e39d9dcB4725B7e6019f5e4FE',
+        ];
+
+        const initialBalances = (
+            await Promise.all(
+                disbursmentAddresses.map((v) => web3.eth.getBalance(v))
+            )
+        ).map((v) => new BN(v));
+
         await GamingApeClubInstance.withdraw();
 
         assert.equal(
@@ -267,70 +282,46 @@ contract('GamingApeClub', (accounts) => {
 
         // 85%
         assert.equal(
-            (
-                await web3.eth.getBalance(
-                    '0x568bFbBD4F4e4CA9Fb15729A61E660786207e94f'
-                )
-            ).toString(),
-            '425000000000000000'
+            (await web3.eth.getBalance(disbursmentAddresses[0])).toString(),
+            new BN('425000000000000000').add(initialBalances[0]).toString()
         );
 
         // 4%
         assert.equal(
-            (
-                await web3.eth.getBalance(
-                    '0x7436F0949BCa6b6C6fD766b6b9AA57417B0314A9'
-                )
-            ).toString(),
-            '20000000000000000'
+            (await web3.eth.getBalance(disbursmentAddresses[1])).toString(),
+            new BN('20000000000000000').add(initialBalances[1]).toString()
         );
 
         const expectedThreePercent = '15000000000000000';
 
         // 3%
         assert.equal(
-            (
-                await web3.eth.getBalance(
-                    '0x13c4d22a8dbB2559B516E10FE0DE47ba4b4A03EB'
-                )
-            ).toString(),
-            expectedThreePercent
+            (await web3.eth.getBalance(disbursmentAddresses[2])).toString(),
+            new BN(expectedThreePercent).add(initialBalances[2]).toString()
         );
 
         // 3%
         assert.equal(
-            (
-                await web3.eth.getBalance(
-                    '0xB3D665d27A1AE8F2f3C32cB1178c9E749ce00714'
-                )
-            ).toString(),
-            expectedThreePercent
+            (await web3.eth.getBalance(disbursmentAddresses[3])).toString(),
+            new BN(expectedThreePercent).add(initialBalances[3]).toString()
         );
 
         // 3%
         assert.equal(
-            (
-                await web3.eth.getBalance(
-                    '0x470049b45A5f05c84e9285Cb467642733450acE5'
-                )
-            ).toString(),
-            expectedThreePercent
+            (await web3.eth.getBalance(disbursmentAddresses[4])).toString(),
+            new BN(expectedThreePercent).add(initialBalances[4]).toString()
         );
 
         // 2%
         assert.equal(
-            (
-                await web3.eth.getBalance(
-                    '0xcbFF601C8745a86e39d9dcB4725B7e6019f5e4FE'
-                )
-            ).toString(),
-            '10000000000000000'
+            (await web3.eth.getBalance(disbursmentAddresses[5])).toString(),
+            new BN('10000000000000000').add(initialBalances[5]).toString()
         );
     });
 
     // TODO: getPresaleMints and getPublicMints
 
-    it.only('calls premint', async () => {
+    it('calls premint', async () => {
         const now = Math.floor(Date.now() / 1000);
         const later = Math.floor(new Date(5000, 12).valueOf() / 1000);
 
