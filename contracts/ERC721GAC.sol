@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Creator: Cory Cherven, inspired by Chiru Labs
 
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.9;
 
 import '@openzeppelin/contracts/token/ERC721/IERC721.sol';
 import '@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol';
