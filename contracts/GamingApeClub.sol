@@ -9,7 +9,13 @@ import "./access/DeveloperAccess.sol";
 import "./MerkleProof.sol";
 import "./ERC721GAC.sol";
 
-contract GamingApeClub is ERC721GAC, MerkleProof, Ownable, DeveloperAccess, ReentrancyGuard {
+contract GamingApeClub is
+    ERC721GAC,
+    MerkleProof,
+    Ownable,
+    DeveloperAccess,
+    ReentrancyGuard
+{
     using PRBMathUD60x18 for uint256;
 
     uint256 private constant ONE_PERCENT = 10000000000000000; // 1% (18 decimals)
@@ -28,7 +34,8 @@ contract GamingApeClub is ERC721GAC, MerkleProof, Ownable, DeveloperAccess, Reen
         uint256 price,
         uint256 presaleMintStart,
         uint256 presaleMintEnd,
-        uint256 publicMintStart
+        uint256 publicMintStart,
+        string memory baseUri
     ) ERC721GAC("Gaming Ape Club", "GAC") DeveloperAccess(devAddress) {
         require(maxSupply >= 5, "Bad supply");
 
@@ -42,6 +49,9 @@ contract GamingApeClub is ERC721GAC, MerkleProof, Ownable, DeveloperAccess, Reen
 
         // CONFIGURE PUBLIC MINT
         _publicStart = publicMintStart;
+
+        // SET BASEURI
+        _baseUri = baseUri;
 
         // MINT 5 AUCTION NFTS
         ownerMint(5, msg.sender);
@@ -67,11 +77,11 @@ contract GamingApeClub is ERC721GAC, MerkleProof, Ownable, DeveloperAccess, Reen
      */
     function ownerMint(uint64 quantity, address to) public onlyOwner {
         uint256 remaining = maximumSupply - _currentIndex;
-    
+
         require(remaining > 0, "Mint over");
         require(quantity <= remaining, "Not enough");
 
-        _mint(owner(), to, quantity, '', true, true);
+        _mint(owner(), to, quantity, "", true, true);
     }
 
     /**
@@ -88,7 +98,7 @@ contract GamingApeClub is ERC721GAC, MerkleProof, Ownable, DeveloperAccess, Reen
      * Updates the mint price
      * @param price - the price in WEI
      */
-    function updateMintPrice(uint256 price) public onlyOwnerOrDeveloper {
+    function setMintPrice(uint256 price) public onlyOwnerOrDeveloper {
         mintPrice = price;
     }
 
@@ -107,7 +117,7 @@ contract GamingApeClub is ERC721GAC, MerkleProof, Ownable, DeveloperAccess, Reen
      * @param wlEndDate - the end date for whitelist in UNIX seconds.
      * @param pubStartDate - the start date for public in UNIX seconds.
      */
-    function updateMintDates(
+    function setMintDates(
         uint256 wlStartDate,
         uint256 wlEndDate,
         uint256 pubStartDate
@@ -120,7 +130,7 @@ contract GamingApeClub is ERC721GAC, MerkleProof, Ownable, DeveloperAccess, Reen
     /**
      * Withdraws balance from the contract to the dividend recipients within.
      */
-    function withdraw() external {
+    function withdraw() external onlyOwnerOrDeveloper {
         uint256 amount = address(this).balance;
 
         (bool s1, ) = payable(0x568bFbBD4F4e4CA9Fb15729A61E660786207e94f).call{
@@ -179,11 +189,7 @@ contract GamingApeClub is ERC721GAC, MerkleProof, Ownable, DeveloperAccess, Reen
         );
 
         require(
-            verify(
-                _merkleRoot,
-                keccak256(abi.encodePacked(msg.sender)),
-                proof
-            ),
+            verify(_merkleRoot, keccak256(abi.encodePacked(msg.sender)), proof),
             "Invalid proof"
         );
         require(mintPrice == msg.value, "Bad value");

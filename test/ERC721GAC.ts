@@ -295,7 +295,7 @@ contract('ERC721GAC', (accounts) => {
         (instance as any).safeTransferFrom(accounts[0], receiver.address, 0);
     });
 
-    it.only('calls mint (_mint)', async () => {
+    it('calls mint (_mint)', async () => {
         const receiver = await ERC721Reciever.new();
         const instance = await buildInstance();
 

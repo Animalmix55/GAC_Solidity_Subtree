@@ -3,14 +3,14 @@
 
 pragma solidity ^0.8.9;
 
-import '@openzeppelin/contracts/token/ERC721/IERC721.sol';
-import '@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol';
-import '@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol';
-import '@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol';
-import '@openzeppelin/contracts/utils/Address.sol';
-import '@openzeppelin/contracts/utils/Context.sol';
-import '@openzeppelin/contracts/utils/Strings.sol';
-import '@openzeppelin/contracts/utils/introspection/ERC165.sol';
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/utils/Context.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
+import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 
 error ApprovalCallerNotOwnerNorApproved();
 error ApprovalQueryForNonexistentToken();
@@ -42,7 +42,13 @@ error URIQueryForNonexistentToken();
  *
  * Assumes that the consumer has both a private (whitelist, perhaps) mint and a public mint.
  */
-contract ERC721GAC is Context, ERC165, IERC721, IERC721Metadata, IERC721Enumerable {
+contract ERC721GAC is
+    Context,
+    ERC165,
+    IERC721,
+    IERC721Metadata,
+    IERC721Enumerable
+{
     using Address for address;
     using Strings for uint256;
 
@@ -60,9 +66,9 @@ contract ERC721GAC is Context, ERC165, IERC721, IERC721Metadata, IERC721Enumerab
         uint16 numberBurned;
     }
 
-    // Compiler will pack the following 
+    // Compiler will pack the following
     // _currentIndex and _burnCounter into a single 256bit word.
-    
+
     // The tokenId of the next token to be minted.
     uint16 internal _currentIndex;
 
@@ -99,7 +105,7 @@ contract ERC721GAC is Context, ERC165, IERC721, IERC721Metadata, IERC721Enumerab
         // Counter underflow is impossible as _burnCounter cannot be incremented
         // more than _currentIndex times
         unchecked {
-            return _currentIndex - _burnCounter;    
+            return _currentIndex - _burnCounter;
         }
     }
 
@@ -108,7 +114,12 @@ contract ERC721GAC is Context, ERC165, IERC721, IERC721Metadata, IERC721Enumerab
      * This read function is O(totalSupply). If calling from a separate contract, be sure to test gas first.
      * It may also degrade with extremely large collection sizes (e.g >> 10000), test for your use case.
      */
-    function tokenByIndex(uint256 index) public view override returns (uint256) {
+    function tokenByIndex(uint256 index)
+        public
+        view
+        override
+        returns (uint256)
+    {
         uint16 numMintedSoFar = _currentIndex;
         uint16 tokenIdsIdx;
 
@@ -133,7 +144,12 @@ contract ERC721GAC is Context, ERC165, IERC721, IERC721Metadata, IERC721Enumerab
      * This read function is O(totalSupply). If calling from a separate contract, be sure to test gas first.
      * It may also degrade with extremely large collection sizes (e.g >> 10000), test for your use case.
      */
-    function tokenOfOwnerByIndex(address owner, uint256 index) public view override returns (uint256) {
+    function tokenOfOwnerByIndex(address owner, uint256 index)
+        public
+        view
+        override
+        returns (uint256)
+    {
         if (index >= balanceOf(owner)) revert OwnerIndexOutOfBounds();
         uint16 numMintedSoFar = _currentIndex;
         uint16 tokenIdsIdx;
@@ -159,7 +175,13 @@ contract ERC721GAC is Context, ERC165, IERC721, IERC721Metadata, IERC721Enumerab
     /**
      * @dev See {IERC165-supportsInterface}.
      */
-    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IERC165) returns (bool) {
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        virtual
+        override(ERC165, IERC165)
+        returns (bool)
+    {
         return
             interfaceId == type(IERC721).interfaceId ||
             interfaceId == type(IERC721Metadata).interfaceId ||
@@ -175,12 +197,20 @@ contract ERC721GAC is Context, ERC165, IERC721, IERC721Metadata, IERC721Enumerab
         return uint256(_addressData[owner].balance);
     }
 
-    function _numberMintedPublic(address owner) internal view returns (uint256) {
+    function _numberMintedPublic(address owner)
+        internal
+        view
+        returns (uint256)
+    {
         if (owner == address(0)) revert MintedQueryForZeroAddress();
         return uint256(_addressData[owner].numberMintedPublic);
     }
 
-    function _numberMintedPrivate(address owner) internal view returns (uint256) {
+    function _numberMintedPrivate(address owner)
+        internal
+        view
+        returns (uint256)
+    {
         if (owner == address(0)) revert MintedQueryForZeroAddress();
         return uint256(_addressData[owner].numberMintedPrivate);
     }
@@ -196,7 +226,8 @@ contract ERC721GAC is Context, ERC165, IERC721, IERC721Metadata, IERC721Enumerab
     function ownerOf(uint256 tokenId) public view override returns (address) {
         if (tokenId > MAX_INT16) revert OwnerQueryForNonexistentToken();
 
-        if (_ownerships[uint16(tokenId)] == address(0)) revert OwnerQueryForNonexistentToken();
+        if (_ownerships[uint16(tokenId)] == address(0))
+            revert OwnerQueryForNonexistentToken();
         return _ownerships[uint16(tokenId)];
     }
 
@@ -217,11 +248,20 @@ contract ERC721GAC is Context, ERC165, IERC721, IERC721Metadata, IERC721Enumerab
     /**
      * @dev See {IERC721Metadata-tokenURI}.
      */
-    function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
+    function tokenURI(uint256 tokenId)
+        public
+        view
+        virtual
+        override
+        returns (string memory)
+    {
         if (!_exists(tokenId)) revert URIQueryForNonexistentToken();
 
         string memory baseURI = _baseURI();
-        return bytes(baseURI).length != 0 ? string(abi.encodePacked(baseURI, tokenId.toString())) : '';
+        return
+            bytes(baseURI).length != 0
+                ? string(abi.encodePacked(baseURI, tokenId.toString()))
+                : "";
     }
 
     /**
@@ -230,7 +270,7 @@ contract ERC721GAC is Context, ERC165, IERC721, IERC721Metadata, IERC721Enumerab
      * by default, can be overriden in child contracts.
      */
     function _baseURI() internal view virtual returns (string memory) {
-        return '';
+        return "";
     }
 
     /**
@@ -250,7 +290,12 @@ contract ERC721GAC is Context, ERC165, IERC721, IERC721Metadata, IERC721Enumerab
     /**
      * @dev See {IERC721-getApproved}.
      */
-    function getApproved(uint256 tokenId) public view override returns (address) {
+    function getApproved(uint256 tokenId)
+        public
+        view
+        override
+        returns (address)
+    {
         if (!_exists(tokenId)) revert ApprovalQueryForNonexistentToken();
 
         return _tokenApprovals[uint16(tokenId)];
@@ -259,7 +304,10 @@ contract ERC721GAC is Context, ERC165, IERC721, IERC721Metadata, IERC721Enumerab
     /**
      * @dev See {IERC721-setApprovalForAll}.
      */
-    function setApprovalForAll(address operator, bool approved) public override {
+    function setApprovalForAll(address operator, bool approved)
+        public
+        override
+    {
         if (operator == _msgSender()) revert ApproveToCaller();
 
         _operatorApprovals[_msgSender()][operator] = approved;
@@ -269,7 +317,13 @@ contract ERC721GAC is Context, ERC165, IERC721, IERC721Metadata, IERC721Enumerab
     /**
      * @dev See {IERC721-isApprovedForAll}.
      */
-    function isApprovedForAll(address owner, address operator) public view virtual override returns (bool) {
+    function isApprovedForAll(address owner, address operator)
+        public
+        view
+        virtual
+        override
+        returns (bool)
+    {
         return _operatorApprovals[owner][operator];
     }
 
@@ -292,7 +346,7 @@ contract ERC721GAC is Context, ERC165, IERC721, IERC721Metadata, IERC721Enumerab
         address to,
         uint256 tokenId
     ) public virtual override {
-        safeTransferFrom(from, to, tokenId, '');
+        safeTransferFrom(from, to, tokenId, "");
     }
 
     /**
@@ -305,7 +359,8 @@ contract ERC721GAC is Context, ERC165, IERC721, IERC721Metadata, IERC721Enumerab
         bytes memory _data
     ) public virtual override {
         _transfer(from, to, tokenId);
-        if (!_checkOnERC721Received(from, to, uint16(tokenId), _data)) { // transfer asserts id in range
+        if (!_checkOnERC721Received(from, to, uint16(tokenId), _data)) {
+            // transfer asserts id in range
             revert TransferToNonERC721ReceiverImplementer();
         }
     }
@@ -319,11 +374,17 @@ contract ERC721GAC is Context, ERC165, IERC721, IERC721Metadata, IERC721Enumerab
      */
     function _exists(uint256 tokenId) internal view returns (bool) {
         if (tokenId > MAX_INT16) return false;
-        return tokenId < _currentIndex && _ownerships[uint16(tokenId)] != address(0);
+        return
+            tokenId < _currentIndex &&
+            _ownerships[uint16(tokenId)] != address(0);
     }
 
-    function _safeMint(address to, uint256 quantity, bool isPrivate) internal {
-        _safeMint(to, quantity, '', isPrivate);
+    function _safeMint(
+        address to,
+        uint256 quantity,
+        bool isPrivate
+    ) internal {
+        _safeMint(to, quantity, "", isPrivate);
     }
 
     /**
@@ -374,7 +435,8 @@ contract ERC721GAC is Context, ERC165, IERC721, IERC721Metadata, IERC721Enumerab
         unchecked {
             _addressData[to].balance += uint16(quantity);
 
-            if (isPrivate) _addressData[from].numberMintedPrivate += uint16(quantity);
+            if (isPrivate)
+                _addressData[from].numberMintedPrivate += uint16(quantity);
             else _addressData[from].numberMintedPublic += uint16(quantity);
 
             uint16 updatedIndex = startTokenId;
@@ -384,7 +446,10 @@ contract ERC721GAC is Context, ERC165, IERC721, IERC721Metadata, IERC721Enumerab
 
                 _ownerships[updatedIndex] = to;
                 emit Transfer(address(0), to, updatedIndex);
-                if (safe && !_checkOnERC721Received(address(0), to, updatedIndex, _data)) {
+                if (
+                    safe &&
+                    !_checkOnERC721Received(address(0), to, updatedIndex, _data)
+                ) {
                     revert TransferToNonERC721ReceiverImplementer();
                 }
 
@@ -472,7 +537,7 @@ contract ERC721GAC is Context, ERC165, IERC721, IERC721Metadata, IERC721Enumerab
         _afterTokenTransfer(prevOwnership, address(0), uint16(tokenId));
 
         // Overflow not possible, as _burnCounter cannot be exceed _currentIndex times.
-        unchecked { 
+        unchecked {
             _burnCounter++;
         }
     }
@@ -508,7 +573,14 @@ contract ERC721GAC is Context, ERC165, IERC721, IERC721Metadata, IERC721Enumerab
         bytes memory _data
     ) private returns (bool) {
         if (to.isContract()) {
-            try IERC721Receiver(to).onERC721Received(_msgSender(), from, tokenId, _data) returns (bytes4 retval) {
+            try
+                IERC721Receiver(to).onERC721Received(
+                    _msgSender(),
+                    from,
+                    tokenId,
+                    _data
+                )
+            returns (bytes4 retval) {
                 return retval == IERC721Receiver(to).onERC721Received.selector;
             } catch (bytes memory reason) {
                 if (reason.length == 0) {
