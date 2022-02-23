@@ -53,6 +53,9 @@ contract('GamingApeClub', (accounts) => {
             meta
         );
 
+        const deploymentHash = GamingApeClubInstance.transactionHash;
+        const tx = await web3.eth.getTransactionReceipt(deploymentHash);
+
         return {
             GamingApeClubInstance,
             presaleStart,
@@ -62,12 +65,15 @@ contract('GamingApeClub', (accounts) => {
             price,
             devAddress,
             baseUri,
+            tx,
         };
     };
 
     it('constructs', async () => {
-        const { GamingApeClubInstance, price, devAddress } =
+        const { GamingApeClubInstance, price, devAddress, tx } =
             await buildInstance();
+
+        console.log(`Gas to deploy contract: ${tx.gasUsed}`);
 
         assert.equal(await GamingApeClubInstance.symbol(), 'GAC');
         assert.equal(await GamingApeClubInstance.name(), 'Gaming Ape Club');
@@ -107,7 +113,9 @@ contract('GamingApeClub', (accounts) => {
         );
 
         // succeeds
-        await GamingApeClubInstance.ownerMint(10, accounts[1]);
+        const tx = await GamingApeClubInstance.ownerMint(10, accounts[1]);
+        console.log(`Gas to ownerMint 10: ${tx.receipt.gasUsed}`);
+
         assert.equal(
             (await GamingApeClubInstance.balanceOf(accounts[1])).toString(),
             '10'
@@ -130,11 +138,13 @@ contract('GamingApeClub', (accounts) => {
         const { GamingApeClubInstance, baseUri, devAddress } =
             await buildInstance();
 
-        await GamingApeClubInstance.ownerMint(1, accounts[0]);
+        const tx0 = await GamingApeClubInstance.ownerMint(1, accounts[0]);
         assert.equal(
             (await GamingApeClubInstance.tokenURI(0)).toString(),
             `${baseUri}0`
         );
+
+        console.log(`Gas to ownerMint 1: ${tx0.receipt.gasUsed}`);
 
         // fails for non owner/dev
         truffleAssert.reverts(
@@ -144,7 +154,9 @@ contract('GamingApeClub', (accounts) => {
             ErrorMessage.NotOwnerOrDev
         );
 
-        await GamingApeClubInstance.setBaseURI('newUri/');
+        const tx1 = await GamingApeClubInstance.setBaseURI('newUri/');
+        console.log(`Gas to set baseURI: ${tx1.receipt.gasUsed}`);
+
         assert.equal(
             (await GamingApeClubInstance.tokenURI(0)).toString(),
             'newUri/0'
@@ -274,7 +286,8 @@ contract('GamingApeClub', (accounts) => {
             )
         ).map((v) => new BN(v));
 
-        await GamingApeClubInstance.withdraw();
+        const tx = await GamingApeClubInstance.withdraw();
+        console.log(`Gas to set withdraw: ${tx.receipt.gasUsed}`);
 
         assert.equal(
             (
@@ -416,10 +429,12 @@ contract('GamingApeClub', (accounts) => {
         );
 
         // success (0 left)
-        await GamingApeClubInstance.premint(1, proof3, {
+        const tx = await GamingApeClubInstance.premint(1, proof3, {
             from: accounts[3],
             value: String(price),
         });
+
+        console.log(`Gas to premint 1: ${tx.receipt.gasUsed}`);
 
         // failed due to mint over
         await truffleAssert.reverts(
@@ -480,7 +495,8 @@ contract('GamingApeClub', (accounts) => {
         const proof1 = tree.getHexProof(account1Leaf);
         const proof4 = tree.getHexProof(account4Leaf);
 
-        await GamingApeClubInstance.setMerkleRoot(root);
+        const tx1 = await GamingApeClubInstance.setMerkleRoot(root);
+        console.log(`Gas to set merkle root: ${tx1.receipt.gasUsed}`);
 
         await truffleAssert.reverts(
             GamingApeClubInstance.premint(5, proof4, {
@@ -491,10 +507,12 @@ contract('GamingApeClub', (accounts) => {
         );
 
         // success (1 left)
-        await GamingApeClubInstance.premint(4, proof1, {
+        const tx = await GamingApeClubInstance.premint(4, proof1, {
             from: accounts[1],
             value: String(price * 4),
         });
+
+        console.log(`Gas to premint 4: ${tx.receipt.gasUsed}`);
 
         // failed due to insufficient remaining
         await truffleAssert.reverts(
@@ -555,7 +573,7 @@ contract('GamingApeClub', (accounts) => {
             later,
             later,
             later,
-            7, // supply 7, 2 left
+            10, // supply 10, 5 left
             undefined,
             1
         );
@@ -567,7 +585,8 @@ contract('GamingApeClub', (accounts) => {
         );
 
         // activate mint
-        await GamingApeClubInstance.setMintDates(later, later, now);
+        const tx0 = await GamingApeClubInstance.setMintDates(later, later, now);
+        console.log(`Gas to set mint dates: ${tx0.receipt.gasUsed}`);
 
         // fails due to exceeding limit
         await truffleAssert.reverts(
@@ -587,11 +606,12 @@ contract('GamingApeClub', (accounts) => {
             ErrorMessage.BadValue
         );
 
-        // mints successfully (1 left)
-        await GamingApeClubInstance.mint(1, {
+        // mints successfully (4 left)
+        const tx1 = await GamingApeClubInstance.mint(1, {
             value: String(price),
             from: accounts[1],
         });
+        console.log(`Gas to mint 1: ${tx1.receipt.gasUsed}`);
 
         // fails due to exceeded limit
         await truffleAssert.reverts(
@@ -605,20 +625,21 @@ contract('GamingApeClub', (accounts) => {
         // increases limit
         await GamingApeClubInstance.setMaxPerWallet(10);
 
-        // fails due to insufficient remaining
+        // fails due to insufficient remaining (4 left)
         await truffleAssert.reverts(
-            GamingApeClubInstance.mint(2, {
-                value: String(price * 2),
+            GamingApeClubInstance.mint(5, {
+                value: String(price * 5),
                 from: accounts[1],
             }),
             ErrorMessage.InsufficientRemaining
         );
 
-        // mints last remaining (0 left)
-        await GamingApeClubInstance.mint(1, {
-            value: String(price),
-            from: accounts[1],
+        // mints last 4 remaining (0 left)
+        const tx2 = await GamingApeClubInstance.mint(4, {
+            value: String(price * 4),
+            from: accounts[4],
         });
+        console.log(`Gas to mint 4: ${tx2.receipt.gasUsed}`);
 
         // fails due to mint over
         await truffleAssert.reverts(
@@ -632,17 +653,33 @@ contract('GamingApeClub', (accounts) => {
         // assert balances
         assert.equal(
             (await GamingApeClubInstance.balanceOf(accounts[1])).toString(),
-            '2'
+            '1'
         );
         assert.equal(
             (
                 await GamingApeClubInstance.getPublicMints(accounts[1])
             ).toString(),
-            '2'
+            '1'
         );
         assert.equal(
             (
                 await GamingApeClubInstance.getPresaleMints(accounts[1])
+            ).toString(),
+            '0'
+        );
+        assert.equal(
+            (await GamingApeClubInstance.balanceOf(accounts[4])).toString(),
+            '4'
+        );
+        assert.equal(
+            (
+                await GamingApeClubInstance.getPublicMints(accounts[4])
+            ).toString(),
+            '4'
+        );
+        assert.equal(
+            (
+                await GamingApeClubInstance.getPresaleMints(accounts[4])
             ).toString(),
             '0'
         );
