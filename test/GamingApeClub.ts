@@ -17,6 +17,7 @@ enum ErrorMessage {
     BadValue = 'Bad value',
     LimitExceeded = 'Limit exceeded',
     NotOwner = 'Not owner',
+    InsufficientRemaining = 'Insuf. amount',
 }
 
 contract('GamingApeClub', (accounts) => {
@@ -32,6 +33,7 @@ contract('GamingApeClub', (accounts) => {
         publicStart: number | undefined = undefined,
         maxSupply = 10000,
         price = 10,
+        walletMax = 1,
         devAddress = accounts[9],
         baseUri = 'test/',
         meta: Truffle.TransactionDetails = { from: accounts[0] }
@@ -42,6 +44,7 @@ contract('GamingApeClub', (accounts) => {
         const GamingApeClubInstance = await GamingApeClub.new(
             devAddress,
             maxSupply,
+            walletMax,
             price,
             presaleStart ?? now,
             presaleEnd ?? later,
@@ -354,7 +357,7 @@ contract('GamingApeClub', (accounts) => {
 
         // inactive mint
         await truffleAssert.reverts(
-            GamingApeClubInstance.premint(proof1, {
+            GamingApeClubInstance.premint(1, proof1, {
                 from: accounts[1],
                 value: String(price),
             }),
@@ -365,21 +368,30 @@ contract('GamingApeClub', (accounts) => {
 
         // invalid value
         await truffleAssert.reverts(
-            GamingApeClubInstance.premint(proof1, { from: accounts[1] }),
+            GamingApeClubInstance.premint(1, proof1, { from: accounts[1] }),
             ErrorMessage.BadValue
         );
 
         // invalid proof
         await truffleAssert.reverts(
-            GamingApeClubInstance.premint(badProof1, {
+            GamingApeClubInstance.premint(1, badProof1, {
                 from: accounts[1],
                 value: String(price),
             }),
             ErrorMessage.InvalidProof
         );
 
+        // limit exceeded
+        await truffleAssert.reverts(
+            GamingApeClubInstance.premint(2, proof1, {
+                from: accounts[1],
+                value: String(price * 2),
+            }),
+            ErrorMessage.LimitExceeded
+        );
+
         // successful mint (1 left)
-        await GamingApeClubInstance.premint(proof1, {
+        await GamingApeClubInstance.premint(1, proof1, {
             from: accounts[1],
             value: String(price),
         });
@@ -396,7 +408,7 @@ contract('GamingApeClub', (accounts) => {
 
         // exceeds limit
         await truffleAssert.reverts(
-            GamingApeClubInstance.premint(proof1, {
+            GamingApeClubInstance.premint(1, proof1, {
                 from: accounts[1],
                 value: String(price),
             }),
@@ -404,18 +416,235 @@ contract('GamingApeClub', (accounts) => {
         );
 
         // success (0 left)
-        await GamingApeClubInstance.premint(proof3, {
+        await GamingApeClubInstance.premint(1, proof3, {
             from: accounts[3],
             value: String(price),
         });
 
         // failed due to mint over
         await truffleAssert.reverts(
-            GamingApeClubInstance.premint(proof4, {
+            GamingApeClubInstance.premint(1, proof4, {
                 from: accounts[4],
                 value: String(price),
             }),
             ErrorMessage.MintOver
+        );
+
+        assert.equal(
+            (
+                await GamingApeClubInstance.getPresaleMints(accounts[3])
+            ).toString(),
+            '1'
+        );
+        assert.equal(
+            (
+                await GamingApeClubInstance.getPublicMints(accounts[3])
+            ).toString(),
+            '0'
+        );
+
+        assert.equal(
+            (
+                await GamingApeClubInstance.getPresaleMints(accounts[1])
+            ).toString(),
+            '1'
+        );
+        assert.equal(
+            (
+                await GamingApeClubInstance.getPublicMints(accounts[1])
+            ).toString(),
+            '0'
+        );
+    });
+
+    it('calls premint (more than 1 minted, just in case)', async () => {
+        const now = Math.floor(Date.now() / 1000);
+        const later = Math.floor(new Date(5000, 12).valueOf() / 1000);
+
+        const { GamingApeClubInstance, price } = await buildInstance(
+            now,
+            later,
+            later,
+            10, // supply 10, 5 left
+            undefined,
+            4
+        );
+
+        const whitelist = getTestWhitelist(30).concat(...accounts); // whitelist
+        const leaves = whitelist.map(keccak256);
+        const tree = new MerkleTree(leaves, keccak256, { sort: true });
+
+        const root = tree.getHexRoot();
+        const account1Leaf = keccak256(accounts[1]);
+        const account4Leaf = keccak256(accounts[4]);
+        const proof1 = tree.getHexProof(account1Leaf);
+        const proof4 = tree.getHexProof(account4Leaf);
+
+        await GamingApeClubInstance.setMerkleRoot(root);
+
+        await truffleAssert.reverts(
+            GamingApeClubInstance.premint(5, proof4, {
+                from: accounts[4],
+                value: String(price * 5),
+            }),
+            ErrorMessage.LimitExceeded
+        );
+
+        // success (1 left)
+        await GamingApeClubInstance.premint(4, proof1, {
+            from: accounts[1],
+            value: String(price * 4),
+        });
+
+        // failed due to insufficient remaining
+        await truffleAssert.reverts(
+            GamingApeClubInstance.premint(2, proof4, {
+                from: accounts[4],
+                value: String(price * 2),
+            }),
+            ErrorMessage.InsufficientRemaining
+        );
+
+        // succeeds on last (0 left)
+        await GamingApeClubInstance.premint(1, proof4, {
+            from: accounts[4],
+            value: String(price),
+        });
+
+        // failed due to mint over
+        await truffleAssert.reverts(
+            GamingApeClubInstance.premint(1, proof4, {
+                from: accounts[4],
+                value: String(price),
+            }),
+            ErrorMessage.MintOver
+        );
+
+        assert.equal(
+            (
+                await GamingApeClubInstance.getPresaleMints(accounts[4])
+            ).toString(),
+            '1'
+        );
+        assert.equal(
+            (
+                await GamingApeClubInstance.getPublicMints(accounts[4])
+            ).toString(),
+            '0'
+        );
+
+        assert.equal(
+            (
+                await GamingApeClubInstance.getPresaleMints(accounts[1])
+            ).toString(),
+            '4'
+        );
+        assert.equal(
+            (
+                await GamingApeClubInstance.getPublicMints(accounts[4])
+            ).toString(),
+            '0'
+        );
+    });
+
+    it('calls mint', async () => {
+        const now = Math.floor(Date.now() / 1000);
+        const later = Math.floor(new Date(5000, 12).valueOf() / 1000);
+
+        const { GamingApeClubInstance, price } = await buildInstance(
+            later,
+            later,
+            later,
+            7, // supply 7, 2 left
+            undefined,
+            1
+        );
+
+        // fails due to mint not being active
+        await truffleAssert.reverts(
+            GamingApeClubInstance.mint(1, { value: String(price) }),
+            ErrorMessage.Inactive
+        );
+
+        // activate mint
+        await GamingApeClubInstance.setMintDates(later, later, now);
+
+        // fails due to exceeding limit
+        await truffleAssert.reverts(
+            GamingApeClubInstance.mint(2, {
+                value: String(price * 2),
+                from: accounts[1],
+            }),
+            ErrorMessage.LimitExceeded
+        );
+
+        // fails due to bad value
+        await truffleAssert.reverts(
+            GamingApeClubInstance.mint(1, {
+                value: String(price - 1),
+                from: accounts[1],
+            }),
+            ErrorMessage.BadValue
+        );
+
+        // mints successfully (1 left)
+        await GamingApeClubInstance.mint(1, {
+            value: String(price),
+            from: accounts[1],
+        });
+
+        // fails due to exceeded limit
+        await truffleAssert.reverts(
+            GamingApeClubInstance.mint(1, {
+                value: String(price),
+                from: accounts[1],
+            }),
+            ErrorMessage.LimitExceeded
+        );
+
+        // increases limit
+        await GamingApeClubInstance.setMaxPerWallet(10);
+
+        // fails due to insufficient remaining
+        await truffleAssert.reverts(
+            GamingApeClubInstance.mint(2, {
+                value: String(price * 2),
+                from: accounts[1],
+            }),
+            ErrorMessage.InsufficientRemaining
+        );
+
+        // mints last remaining (0 left)
+        await GamingApeClubInstance.mint(1, {
+            value: String(price),
+            from: accounts[1],
+        });
+
+        // fails due to mint over
+        await truffleAssert.reverts(
+            GamingApeClubInstance.mint(1, {
+                value: String(price),
+                from: accounts[1],
+            }),
+            ErrorMessage.MintOver
+        );
+
+        // assert balances
+        assert.equal(
+            (await GamingApeClubInstance.balanceOf(accounts[1])).toString(),
+            '2'
+        );
+        assert.equal(
+            (
+                await GamingApeClubInstance.getPublicMints(accounts[1])
+            ).toString(),
+            '2'
+        );
+        assert.equal(
+            (
+                await GamingApeClubInstance.getPresaleMints(accounts[1])
+            ).toString(),
+            '0'
         );
     });
 });

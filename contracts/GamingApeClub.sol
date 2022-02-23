@@ -27,10 +27,12 @@ contract GamingApeClub is
     uint256 private _publicStart;
     string private _baseUri;
     uint16 public maximumSupply;
+    uint16 public maxPerWallet;
 
     constructor(
         address devAddress,
         uint16 maxSupply,
+        uint16 walletMax,
         uint256 price,
         uint256 presaleMintStart,
         uint256 presaleMintEnd,
@@ -41,6 +43,7 @@ contract GamingApeClub is
 
         // GLOBALS
         maximumSupply = maxSupply;
+        maxPerWallet = walletMax;
         mintPrice = price;
 
         // CONFIGURE PRESALE Mint
@@ -82,6 +85,15 @@ contract GamingApeClub is
         require(quantity <= remaining, "Not enough");
 
         _mint(owner(), to, quantity, "", true, true);
+    }
+
+    /**
+     * Sets the wallet max for both sales
+     *
+     * @param newMax - the new wallet max for the two sales
+     */
+    function setMaxPerWallet(uint16 newMax) public onlyOwnerOrDeveloper {
+        maxPerWallet = newMax;
     }
 
     /**
@@ -157,7 +169,7 @@ contract GamingApeClub is
         // fallback to paying owner
         (bool s7, ) = payable(owner()).call{value: amount}("");
 
-        require(s7, 'Payment failed');
+        require(s7, "Payment failed");
     }
 
     // ------------------------------------------------ MINT ------------------------------------------------
@@ -181,12 +193,14 @@ contract GamingApeClub is
     /**
      * Mints in the premint stage by using a signed transaction from a merkle tree whitelist.
      *
-     * @param proof - the merkle proof from the root to the whitelisted address
+     * @param amount - the amount of tokens to mint. Will fail if exceeds allowable amount.
+     * @param proof - the merkle proof from the root to the whitelisted address.
      */
-    function premint(bytes32[] memory proof) public payable nonReentrant {
+    function premint(uint16 amount, bytes32[] memory proof) public payable nonReentrant {
         uint256 remaining = maximumSupply - _currentIndex;
 
         require(remaining > 0, "Mint over");
+        require(remaining >= amount, "Insuf. amount");
         require(
             _whitelistStart <= block.timestamp &&
                 _whitelistEnd >= block.timestamp,
@@ -197,11 +211,14 @@ contract GamingApeClub is
             verify(_merkleRoot, keccak256(abi.encodePacked(msg.sender)), proof),
             "Invalid proof"
         );
-        require(mintPrice == msg.value, "Bad value");
-        require(_numberMintedPrivate(msg.sender) == 0, "Limit exceeded");
+        require(mintPrice * amount == msg.value, "Bad value");
+        require(
+            _numberMintedPrivate(msg.sender) + amount <= maxPerWallet,
+            "Limit exceeded"
+        );
 
         // DISTRIBUTE THE TOKENS
-        _safeMint(msg.sender, 1, true);
+        _safeMint(msg.sender, amount, true);
     }
 
     /**
@@ -209,16 +226,20 @@ contract GamingApeClub is
      *
      * @notice This function allows minting in the public sale.
      */
-    function mint() public payable nonReentrant {
+    function mint(uint16 amount) public payable nonReentrant {
         uint256 remaining = maximumSupply - _currentIndex;
 
         require(remaining > 0, "Mint over");
+        require(remaining >= amount, "Insuf. amount");
         require(block.timestamp >= _publicStart, "Inactive");
-        require(_numberMintedPublic(msg.sender) == 0, "Limit exceeded");
-        require(mintPrice == msg.value, "Invalid value");
+        require(
+            _numberMintedPublic(msg.sender) + amount <= maxPerWallet,
+            "Limit exceeded"
+        );
+        require(mintPrice * amount == msg.value, "Bad value");
 
         // DISTRIBUTE THE TOKENS
-        _safeMint(msg.sender, 1, false);
+        _safeMint(msg.sender, amount, false);
     }
 
     /**
