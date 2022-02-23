@@ -647,6 +647,37 @@ contract('GamingApeClub', (accounts) => {
             '0'
         );
     });
+
+    it('calls burn', async () => {
+        const { GamingApeClubInstance } = await buildInstance();
+
+        assert.equal(
+            (await GamingApeClubInstance.balanceOf(accounts[0])).toString(),
+            '5'
+        );
+        assert.equal(await GamingApeClubInstance.ownerOf(0), accounts[0]);
+
+        // fails if a different account attempts to call burn
+        await truffleAssert.reverts(
+            GamingApeClubInstance.burn(0, { from: accounts[1] }),
+            ErrorMessage.NotOwner
+        );
+
+        // fails if token does not exist
+        await truffleAssert.fails(GamingApeClubInstance.burn(10));
+
+        // succeeds for token owner
+        await GamingApeClubInstance.burn(0);
+
+        assert.equal(
+            (await GamingApeClubInstance.balanceOf(accounts[0])).toString(),
+            '4'
+        );
+        assert.equal(await GamingApeClubInstance.ownerOf(4), accounts[0]);
+
+        // fails if attempt to burn again
+        await truffleAssert.fails(GamingApeClubInstance.burn(0));
+    });
 });
 
 export default {};
