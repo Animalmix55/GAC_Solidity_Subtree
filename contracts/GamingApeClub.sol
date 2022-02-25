@@ -22,9 +22,9 @@ contract GamingApeClub is
 
     bytes32 private _merkleRoot;
     uint256 public mintPrice;
-    uint256 private _whitelistStart;
-    uint256 private _whitelistEnd;
-    uint256 private _publicStart;
+    uint256 public whitelistStart;
+    uint256 public whitelistEnd;
+    uint256 public publicStart;
     string private _baseUri;
     uint16 public maximumSupply;
     uint16 public maxPerWallet;
@@ -47,11 +47,11 @@ contract GamingApeClub is
         mintPrice = price;
 
         // CONFIGURE PRESALE Mint
-        _whitelistStart = presaleMintStart;
-        _whitelistEnd = presaleMintEnd;
+        whitelistStart = presaleMintStart;
+        whitelistEnd = presaleMintEnd;
 
         // CONFIGURE PUBLIC MINT
-        _publicStart = publicMintStart;
+        publicStart = publicMintStart;
 
         // SET BASEURI
         _baseUri = baseUri;
@@ -134,9 +134,9 @@ contract GamingApeClub is
         uint256 wlEndDate,
         uint256 pubStartDate
     ) public onlyOwnerOrDeveloper {
-        _whitelistStart = wlStartDate;
-        _whitelistEnd = wlEndDate;
-        _publicStart = pubStartDate;
+        whitelistStart = wlStartDate;
+        whitelistEnd = wlEndDate;
+        publicStart = pubStartDate;
     }
 
     /**
@@ -202,8 +202,8 @@ contract GamingApeClub is
         require(remaining > 0, "Mint over");
         require(remaining >= amount, "Insuf. amount");
         require(
-            _whitelistStart <= block.timestamp &&
-                _whitelistEnd >= block.timestamp,
+            whitelistStart <= block.timestamp &&
+                whitelistEnd >= block.timestamp,
             "Inactive"
         );
 
@@ -231,7 +231,7 @@ contract GamingApeClub is
 
         require(remaining > 0, "Mint over");
         require(remaining >= amount, "Insuf. amount");
-        require(block.timestamp >= _publicStart, "Inactive");
+        require(block.timestamp >= publicStart, "Inactive");
         require(
             _numberMintedPublic(msg.sender) + amount <= maxPerWallet,
             "Limit exceeded"
