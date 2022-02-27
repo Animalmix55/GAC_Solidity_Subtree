@@ -8,9 +8,9 @@ module.exports = (artifacts: Truffle.Artifacts, web3: Web3) => {
             100,
             1,
             '100000000000000000',
-            0,
+            1645984500,
             Date.now() * 10,
-            0,
+            1645984500,
             'test/'
         );
     };
