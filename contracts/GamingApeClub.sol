@@ -201,11 +201,6 @@ contract GamingApeClub is
 
         require(remaining > 0, "Mint over");
         require(remaining >= amount, "Insuf. amount");
-        require(
-            whitelistStart <= block.timestamp &&
-                whitelistEnd >= block.timestamp,
-            "Inactive"
-        );
 
         require(
             verify(_merkleRoot, keccak256(abi.encodePacked(msg.sender)), proof),
@@ -215,6 +210,12 @@ contract GamingApeClub is
         require(
             _numberMintedPrivate(msg.sender) + amount <= maxPerWallet,
             "Limit exceeded"
+        );
+
+        require(
+            whitelistStart <= block.timestamp &&
+                whitelistEnd >= block.timestamp,
+            "Inactive"
         );
 
         // DISTRIBUTE THE TOKENS
@@ -231,12 +232,12 @@ contract GamingApeClub is
 
         require(remaining > 0, "Mint over");
         require(remaining >= amount, "Insuf. amount");
-        require(block.timestamp >= publicStart, "Inactive");
         require(
             _numberMintedPublic(msg.sender) + amount <= maxPerWallet,
             "Limit exceeded"
         );
         require(mintPrice * amount == msg.value, "Bad value");
+        require(block.timestamp >= publicStart, "Inactive");
 
         // DISTRIBUTE THE TOKENS
         _safeMint(msg.sender, amount, false);
