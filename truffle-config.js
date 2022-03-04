@@ -4,16 +4,16 @@ require('ts-node').register({
 });
 require('dotenv').config();
 
-// const HDWalletProvider = require('@truffle/hdwallet-provider');
+const HDWalletProvider = require('@truffle/hdwallet-provider');
 
 // const ropstenProvider = new HDWalletProvider(
 //     process.env.ropsten_private,
-//     `https://ropsten.infura.io/v3/${process.env.infura_key}`
+//     'https://ropsten.infura.io/v3/81396dca1e0848fea22c248365f42873'
 // );
-// const rinkebyProvider = new HDWalletProvider(
-//     process.env.rinkeby_private,
-//     `https://rinkeby.infura.io/v3/${process.env.infura_key}`
-// );
+const rinkebyProvider = new HDWalletProvider(
+    process.env.rinkeby_private,
+    'https://rinkeby.infura.io/v3/81396dca1e0848fea22c248365f42873'
+);
 
 module.exports = {
     // Uncommenting the defaults below
@@ -40,11 +40,11 @@ module.exports = {
         //     network_id: 3,
         //     gasPrice: 10000000000, // 10 gwei
         // },
-        // rinkeby: {
-        //     provider: rinkebyProvider,
-        //     network_id: 4,
-        //     gasPrice: 10000000000, // 10 gwei
-        // },
+        rinkeby: {
+            provider: rinkebyProvider,
+            network_id: 4,
+            gasPrice: 10000000000, // 10 gwei
+        },
     },
     compilers: {
         solc: {
@@ -59,7 +59,7 @@ module.exports = {
     },
     plugins: ['truffle-plugin-verify', 'truffle-contract-size'],
     api_keys: {
-        etherscan: process.env.etherscan_token,
+        etherscan: '4QBZ6FA5BK2BBW78ZSN1GZRGCPIGX63VAN',
     },
     //
     // Truffle DB is currently disabled by default; to enable it, change enabled:
