@@ -29,6 +29,7 @@ error TransferFromIncorrectOwner();
 error TransferToNonERC721ReceiverImplementer();
 error TransferToZeroAddress();
 error URIQueryForNonexistentToken();
+error MintIdOutOfRange();
 
 /**
  * @dev Implementation of https://eips.ethereum.org/EIPS/eip-721[ERC721] Non-Fungible Token Standard, including
@@ -62,6 +63,8 @@ contract ERC721GAC is
         uint16 numberMintedPublic;
         // Keeps track of private mint count with minimal overhead for tokenomics.
         uint16 numberMintedPrivate;
+        // Keeps track of an additional mint count with minimal overhead for tokenomics.
+        uint16 numberMintedAux;
         // Keeps track of burn count with minimal overhead for tokenomics.
         uint16 numberBurned;
     }
@@ -204,6 +207,11 @@ contract ERC721GAC is
     {
         if (owner == address(0)) revert MintedQueryForZeroAddress();
         return uint256(_addressData[owner].numberMintedPublic);
+    }
+
+    function _numberMintedAux(address owner) internal view returns (uint256) {
+        if (owner == address(0)) revert MintedQueryForZeroAddress();
+        return uint256(_addressData[owner].numberMintedAux);
     }
 
     function _numberMintedPrivate(address owner)
@@ -379,12 +387,18 @@ contract ERC721GAC is
             _ownerships[uint16(tokenId)] != address(0);
     }
 
+    /**
+     * Safe mints a given quantity of tokens.
+     * @param to - the recipient
+     * @param quantity - the amount to mint
+     * @param mintId - 0 (presale), 1 (aux), 2 (public)
+     */
     function _safeMint(
         address to,
         uint256 quantity,
-        bool isPrivate
+        uint8 mintId
     ) internal {
-        _safeMint(to, quantity, "", isPrivate);
+        _safeMint(to, quantity, "", mintId);
     }
 
     /**
@@ -396,14 +410,18 @@ contract ERC721GAC is
      * - `quantity` must be greater than 0.
      *
      * Emits a {Transfer} event.
+     * @param to - the recipient
+     * @param quantity - the amount to mint
+     * @param mintId - 0 (presale), 1 (aux), 2 (public)
+     * @param _data - mint data to pass to the recipient contract
      */
     function _safeMint(
         address to,
         uint256 quantity,
         bytes memory _data,
-        bool isPrivate
+        uint8 mintId
     ) internal {
-        _mint(to, to, quantity, _data, true, isPrivate);
+        _mint(to, to, quantity, _data, true, mintId);
     }
 
     /**
@@ -416,6 +434,11 @@ contract ERC721GAC is
      * - `quantity` must be greater than 0.
      *
      * Emits a {Transfer} event.
+     * @param to - the recipient
+     * @param quantity - the amount to mint
+     * @param mintId - 0 (presale), 1 (aux), 2 (public)
+     * @param _data - mint data to pass to the recipient contract
+     * @param safe - indicates if the mint is safe or not
      */
     function _mint(
         address from,
@@ -423,10 +446,11 @@ contract ERC721GAC is
         uint256 quantity,
         bytes memory _data,
         bool safe,
-        bool isPrivate
+        uint8 mintId
     ) internal {
         if (to == address(0)) revert MintToZeroAddress();
         if (quantity == 0) revert MintZeroQuantity();
+        if (mintId >= 3) revert MintIdOutOfRange();
 
         uint16 startTokenId = _currentIndex;
         // Overflows are incredibly unrealistic.
@@ -435,8 +459,9 @@ contract ERC721GAC is
         unchecked {
             _addressData[to].balance += uint16(quantity);
 
-            if (isPrivate)
+            if (mintId == 0)
                 _addressData[from].numberMintedPrivate += uint16(quantity);
+            else if (mintId == 1) _addressData[from].numberMintedAux += uint16(quantity);
             else _addressData[from].numberMintedPublic += uint16(quantity);
 
             uint16 updatedIndex = startTokenId;

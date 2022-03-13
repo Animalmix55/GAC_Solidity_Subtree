@@ -6,6 +6,12 @@ const ERC721Reciever = artifacts.require('TestERC721Receiver');
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
+enum MintType {
+    Private,
+    Aux,
+    Public,
+}
+
 contract('ERC721GAC', (accounts) => {
     const buildInstance = (
         name = 'test',
@@ -31,13 +37,19 @@ contract('ERC721GAC', (accounts) => {
         assert.equal(initialSupply.toString(), '0');
 
         // mint a few
-        await instance.mint(accounts[0], accounts[0], 10, true, false);
+        await instance.mint(
+            accounts[0],
+            accounts[0],
+            10,
+            true,
+            MintType.Public
+        );
         initialSupply = await instance.totalSupply();
 
         assert.equal(initialSupply.toString(), '10');
 
         // mint one more
-        await instance.mint(accounts[0], accounts[0], 1, true, false);
+        await instance.mint(accounts[0], accounts[0], 1, true, MintType.Public);
         initialSupply = await instance.totalSupply();
 
         assert.equal(initialSupply.toString(), '11');
@@ -50,7 +62,13 @@ contract('ERC721GAC', (accounts) => {
         await truffleAssert.fails(instance.tokenByIndex(0));
 
         // mint 10
-        await instance.mint(accounts[0], accounts[0], 10, true, false);
+        await instance.mint(
+            accounts[0],
+            accounts[0],
+            10,
+            true,
+            MintType.Public
+        );
 
         let index = await instance.tokenByIndex(0);
         assert.equal(index.toString(), '0');
@@ -75,7 +93,13 @@ contract('ERC721GAC', (accounts) => {
         await truffleAssert.fails(instance.tokenOfOwnerByIndex(accounts[0], 0));
 
         // mint 10
-        await instance.mint(accounts[0], accounts[0], 10, true, false);
+        await instance.mint(
+            accounts[0],
+            accounts[0],
+            10,
+            true,
+            MintType.Public
+        );
 
         let tokenId = await instance.tokenOfOwnerByIndex(accounts[0], 0);
         assert.equal(tokenId.toString(), '0');
@@ -104,11 +128,23 @@ contract('ERC721GAC', (accounts) => {
         const instance = await buildInstance();
 
         assert.equal((await instance.balanceOf(accounts[0])).toString(), '0');
-        await instance.mint(accounts[0], accounts[0], '5', true, false);
+        await instance.mint(
+            accounts[0],
+            accounts[0],
+            '5',
+            true,
+            MintType.Public
+        );
         assert.equal((await instance.balanceOf(accounts[0])).toString(), '5');
 
         assert.equal((await instance.balanceOf(accounts[1])).toString(), '0');
-        await instance.mint(accounts[1], accounts[1], '3', true, false);
+        await instance.mint(
+            accounts[1],
+            accounts[1],
+            '3',
+            true,
+            MintType.Public
+        );
         assert.equal((await instance.balanceOf(accounts[1])).toString(), '3');
     });
 
@@ -119,10 +155,16 @@ contract('ERC721GAC', (accounts) => {
         await truffleAssert.fails(instance.ownerOf(0));
 
         // mint
-        await instance.mint(accounts[0], accounts[0], 10, true, false);
+        await instance.mint(
+            accounts[0],
+            accounts[0],
+            10,
+            true,
+            MintType.Public
+        );
         assert.equal(await instance.ownerOf(9), accounts[0]);
 
-        await instance.mint(accounts[1], accounts[1], 2, true, false);
+        await instance.mint(accounts[1], accounts[1], 2, true, MintType.Public);
         assert.equal(await instance.ownerOf(10), accounts[1]);
 
         await truffleAssert.fails(instance.ownerOf(12));
@@ -148,7 +190,13 @@ contract('ERC721GAC', (accounts) => {
         // fails on nonexistent token
         await truffleAssert.fails(instance.tokenURI(0));
 
-        await instance.mint(accounts[0], accounts[0], 10, true, false);
+        await instance.mint(
+            accounts[0],
+            accounts[0],
+            10,
+            true,
+            MintType.Public
+        );
 
         assert.equal(await instance.tokenURI(9), 'uri/9');
         assert.equal(await instance.tokenURI(0), 'uri/0');
@@ -162,7 +210,13 @@ contract('ERC721GAC', (accounts) => {
         await truffleAssert.fails(instance.approve(accounts[1], 0));
 
         // mint
-        await instance.mint(accounts[0], accounts[0], 10, true, false);
+        await instance.mint(
+            accounts[0],
+            accounts[0],
+            10,
+            true,
+            MintType.Public
+        );
 
         // approve
         await instance.approve(accounts[1], 0);
@@ -183,7 +237,13 @@ contract('ERC721GAC', (accounts) => {
         await truffleAssert.fails(instance.getApproved(0));
 
         // mint
-        await instance.mint(accounts[0], accounts[0], 10, true, false);
+        await instance.mint(
+            accounts[0],
+            accounts[0],
+            10,
+            true,
+            MintType.Public
+        );
 
         // approve
         await instance.approve(accounts[1], 0);
@@ -220,7 +280,13 @@ contract('ERC721GAC', (accounts) => {
             instance.transferFrom(accounts[0], accounts[1], 0)
         );
 
-        await instance.mint(accounts[0], accounts[0], 10, true, false);
+        await instance.mint(
+            accounts[0],
+            accounts[0],
+            10,
+            true,
+            MintType.Public
+        );
 
         // fails if sender is not approved
         await truffleAssert.fails(
@@ -277,7 +343,13 @@ contract('ERC721GAC', (accounts) => {
         const instance = await buildInstance();
         const receiver = await ERC721Reciever.new();
 
-        await instance.mint(accounts[0], accounts[0], 10, true, false);
+        await instance.mint(
+            accounts[0],
+            accounts[0],
+            10,
+            true,
+            MintType.Public
+        );
 
         // fails when data is not empty
         await truffleAssert.fails(
@@ -301,22 +373,40 @@ contract('ERC721GAC', (accounts) => {
 
         // fails minting to zero address
         await truffleAssert.fails(
-            instance.mint(ZERO_ADDRESS, ZERO_ADDRESS, 10, true, false)
+            instance.mint(ZERO_ADDRESS, ZERO_ADDRESS, 10, true, MintType.Public)
         );
 
         // fails minting zero tokens
         await truffleAssert.fails(
-            instance.mint(accounts[0], accounts[0], 0, true, false)
+            instance.mint(accounts[0], accounts[0], 0, true, MintType.Public)
         );
 
         // succeeds minting one (public, unsafe)
-        await instance.mint(accounts[0], accounts[0], 1, false, false);
+        await instance.mint(
+            accounts[0],
+            accounts[0],
+            1,
+            false,
+            MintType.Public
+        );
         // succeeds minting one (public, safe)
-        await instance.mint(accounts[0], accounts[0], 1, true, false);
+        await instance.mint(accounts[0], accounts[0], 1, true, MintType.Public);
         // succeeds minting one (private, unsafe)
-        await instance.mint(accounts[0], accounts[0], 1, false, true);
+        await instance.mint(
+            accounts[0],
+            accounts[0],
+            1,
+            false,
+            MintType.Private
+        );
         // succeeds minting two (private, safe)
-        await instance.mint(accounts[0], accounts[0], 2, true, true);
+        await instance.mint(
+            accounts[0],
+            accounts[0],
+            2,
+            true,
+            MintType.Private
+        );
 
         // assert balance changed
         assert.equal((await instance.balanceOf(accounts[0])).toString(), '5');
@@ -347,7 +437,7 @@ contract('ERC721GAC', (accounts) => {
                 1,
                 '0x5d2f5bbd',
                 true,
-                false
+                MintType.Public
             )
         );
         // succeeds to receiver (unsafe)
@@ -357,7 +447,7 @@ contract('ERC721GAC', (accounts) => {
             1,
             '0x5d2f5bbd',
             false,
-            false
+            MintType.Public
         );
         // succeeds to receiver (safe)
         await instance.mint(
@@ -365,7 +455,7 @@ contract('ERC721GAC', (accounts) => {
             receiver.address,
             1,
             false,
-            false
+            MintType.Public
         );
 
         assert.equal(
@@ -374,7 +464,7 @@ contract('ERC721GAC', (accounts) => {
         );
 
         // mints from another wallet
-        await instance.mint(accounts[2], accounts[3], 2, true, false);
+        await instance.mint(accounts[2], accounts[3], 2, true, MintType.Public);
         assert.equal((await instance.balanceOf(accounts[3])).toString(), '2');
         assert.equal(
             (await instance.publicMintCount(accounts[2])).toString(),
@@ -386,7 +476,13 @@ contract('ERC721GAC', (accounts) => {
         const instance = await buildInstance();
 
         // mint
-        await instance.mint(accounts[0], accounts[0], 10, true, false);
+        await instance.mint(
+            accounts[0],
+            accounts[0],
+            10,
+            true,
+            MintType.Public
+        );
         assert.equal((await instance.totalSupply()).toString(), '10');
         assert.equal((await instance.balanceOf(accounts[0])).toString(), '10');
 
@@ -406,7 +502,7 @@ contract('ERC721GAC', (accounts) => {
         assert.equal((await instance.balanceOf(accounts[0])).toString(), '9');
 
         // mints continue
-        await instance.mint(accounts[0], accounts[0], 1, true, false);
+        await instance.mint(accounts[0], accounts[0], 1, true, MintType.Public);
         assert.equal((await instance.balanceOf(accounts[0])).toString(), '10');
         assert.equal(await instance.ownerOf(10), accounts[0]);
 

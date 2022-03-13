@@ -23,6 +23,7 @@ contract GamingApeClub is
     bytes32 private _merkleRoot;
     uint256 public mintPrice;
     uint256 public whitelistStart;
+    uint256 public whitelistReset;
     uint256 public whitelistEnd;
     uint256 public publicStart;
     string private _baseUri;
@@ -35,6 +36,7 @@ contract GamingApeClub is
         uint16 walletMax,
         uint256 price,
         uint256 presaleMintStart,
+        uint256 presaleResetTime,
         uint256 presaleMintEnd,
         uint256 publicMintStart,
         string memory baseUri
@@ -48,6 +50,7 @@ contract GamingApeClub is
 
         // CONFIGURE PRESALE Mint
         whitelistStart = presaleMintStart;
+        whitelistReset = presaleResetTime;
         whitelistEnd = presaleMintEnd;
 
         // CONFIGURE PUBLIC MINT
@@ -84,7 +87,7 @@ contract GamingApeClub is
         require(remaining > 0, "Mint over");
         require(quantity <= remaining, "Not enough");
 
-        _mint(owner(), to, quantity, "", true, true);
+        _mint(owner(), to, quantity, "", true, 0); // private
     }
 
     /**
@@ -126,15 +129,18 @@ contract GamingApeClub is
      * Updates the mint dates.
      *
      * @param wlStartDate - the start date for whitelist in UNIX seconds.
+     * @param wlResetDate - the reset date for whitelist in UNIX seconds.
      * @param wlEndDate - the end date for whitelist in UNIX seconds.
      * @param pubStartDate - the start date for public in UNIX seconds.
      */
     function setMintDates(
         uint256 wlStartDate,
+        uint256 wlResetDate,
         uint256 wlEndDate,
         uint256 pubStartDate
     ) public onlyOwnerOrDeveloper {
         whitelistStart = wlStartDate;
+        whitelistReset = wlResetDate;
         whitelistEnd = wlEndDate;
         publicStart = pubStartDate;
     }
@@ -177,8 +183,10 @@ contract GamingApeClub is
     /**
      * A handy getter to retrieve the number of private mints conducted by a user.
      * @param user - the user to query for.
+     * @param postReset - retrieves the number of mints after the whitelist reset.
      */
-    function getPresaleMints(address user) external view returns (uint256) {
+    function getPresaleMints(address user, bool postReset) external view returns (uint256) {
+        if (postReset) return _numberMintedAux(user);
         return _numberMintedPrivate(user);
     }
 
@@ -207,10 +215,20 @@ contract GamingApeClub is
             "Invalid proof"
         );
         require(mintPrice * amount == msg.value, "Bad value");
-        require(
-            _numberMintedPrivate(msg.sender) + amount <= maxPerWallet,
-            "Limit exceeded"
-        );
+        bool isReset = block.timestamp >= whitelistReset;
+        
+        if (isReset) {
+            require(
+                _numberMintedAux(msg.sender) + amount <= maxPerWallet,
+                "Limit exceeded"
+            );
+        } else {
+            require(
+                _numberMintedPrivate(msg.sender) + amount <= maxPerWallet,
+                "Limit exceeded"
+            );
+        }
+        
 
         require(
             whitelistStart <= block.timestamp &&
@@ -219,7 +237,7 @@ contract GamingApeClub is
         );
 
         // DISTRIBUTE THE TOKENS
-        _safeMint(msg.sender, amount, true);
+        _safeMint(msg.sender, amount, isReset ? 1 : 0);
     }
 
     /**
@@ -240,7 +258,7 @@ contract GamingApeClub is
         require(block.timestamp >= publicStart, "Inactive");
 
         // DISTRIBUTE THE TOKENS
-        _safeMint(msg.sender, amount, false);
+        _safeMint(msg.sender, amount, 2); // public
     }
 
     /**

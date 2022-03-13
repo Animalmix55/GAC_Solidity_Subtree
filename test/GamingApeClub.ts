@@ -30,6 +30,7 @@ contract('GamingApeClub', (accounts) => {
     const buildInstance = async (
         presaleStart: number | undefined = undefined,
         presaleEnd: number | undefined = undefined,
+        presaleResetTime: number | undefined = undefined,
         publicStart: number | undefined = undefined,
         maxSupply = 10000,
         price = 10,
@@ -47,6 +48,7 @@ contract('GamingApeClub', (accounts) => {
             walletMax,
             price,
             presaleStart ?? now,
+            presaleResetTime ?? later,
             presaleEnd ?? later,
             publicStart ?? now,
             baseUri,
@@ -96,6 +98,7 @@ contract('GamingApeClub', (accounts) => {
             undefined,
             undefined,
             undefined,
+            undefined,
             15 // 5 used on deploy
         );
 
@@ -122,7 +125,7 @@ contract('GamingApeClub', (accounts) => {
         );
         assert.equal(
             (
-                await GamingApeClubInstance.getPresaleMints(accounts[0])
+                await GamingApeClubInstance.getPresaleMints(accounts[0], false)
             ).toString(),
             '15'
         );
@@ -232,16 +235,16 @@ contract('GamingApeClub', (accounts) => {
 
         // fails for non owner/dev
         truffleAssert.reverts(
-            GamingApeClubInstance.setMintDates(1, 1, 1, {
+            GamingApeClubInstance.setMintDates(1, 1, 1, 1, {
                 from: accounts[1],
             }),
             ErrorMessage.NotOwnerOrDev
         );
 
-        await GamingApeClubInstance.setMintDates(1, 1, 1);
+        await GamingApeClubInstance.setMintDates(1, 1, 1, 1);
 
         // works for dev
-        await GamingApeClubInstance.setMintDates(2, 2, 2, {
+        await GamingApeClubInstance.setMintDates(2, 2, 2, 2, {
             from: devAddress,
         });
     });
@@ -345,6 +348,7 @@ contract('GamingApeClub', (accounts) => {
             later,
             later,
             later,
+            later,
             7 // supply 7, 2 left
         );
 
@@ -377,7 +381,7 @@ contract('GamingApeClub', (accounts) => {
             ErrorMessage.Inactive
         );
 
-        await GamingApeClubInstance.setMintDates(now, later, now);
+        await GamingApeClubInstance.setMintDates(now, later, later, now);
 
         // invalid value
         await truffleAssert.reverts(
@@ -414,7 +418,7 @@ contract('GamingApeClub', (accounts) => {
         );
         assert.equal(
             (
-                await GamingApeClubInstance.getPresaleMints(accounts[1])
+                await GamingApeClubInstance.getPresaleMints(accounts[1], false)
             ).toString(),
             '1'
         );
@@ -447,7 +451,7 @@ contract('GamingApeClub', (accounts) => {
 
         assert.equal(
             (
-                await GamingApeClubInstance.getPresaleMints(accounts[3])
+                await GamingApeClubInstance.getPresaleMints(accounts[3], false)
             ).toString(),
             '1'
         );
@@ -460,10 +464,178 @@ contract('GamingApeClub', (accounts) => {
 
         assert.equal(
             (
-                await GamingApeClubInstance.getPresaleMints(accounts[1])
+                await GamingApeClubInstance.getPresaleMints(accounts[1], false)
             ).toString(),
             '1'
         );
+        assert.equal(
+            (
+                await GamingApeClubInstance.getPublicMints(accounts[1])
+            ).toString(),
+            '0'
+        );
+    });
+
+    it.only('calls premint (before/after reset)', async () => {
+        const now = Math.floor(Date.now() / 1000);
+        const later = Math.floor(new Date(5000, 12).valueOf() / 1000);
+
+        const { GamingApeClubInstance, price } = await buildInstance(
+            now,
+            later,
+            later,
+            later,
+            9, // supply 9, 4 left
+            undefined,
+            1
+        );
+
+        const whitelist = getTestWhitelist(30).concat(...accounts); // whitelist
+        const leaves = whitelist.map(keccak256);
+        const tree = new MerkleTree(leaves, keccak256, { sort: true });
+
+        const root = tree.getHexRoot();
+        const account1Leaf = keccak256(accounts[1]);
+        const account3Leaf = keccak256(accounts[3]);
+        const proof1 = tree.getHexProof(account1Leaf);
+        const proof3 = tree.getHexProof(account3Leaf);
+
+        await GamingApeClubInstance.setMerkleRoot(root);
+        await GamingApeClubInstance.setMintDates(now, later, later, now);
+
+        // invalid value
+        await truffleAssert.reverts(
+            GamingApeClubInstance.premint(1, proof1, { from: accounts[1] }),
+            ErrorMessage.BadValue
+        );
+
+        // successful mint (3 left)
+        await GamingApeClubInstance.premint(1, proof1, {
+            from: accounts[1],
+            value: String(price),
+        });
+        assert.equal(
+            (await GamingApeClubInstance.balanceOf(accounts[1])).toString(),
+            '1'
+        );
+        assert.equal(
+            (
+                await GamingApeClubInstance.getPresaleMints(accounts[1], false)
+            ).toString(),
+            '1'
+        );
+
+        // success (2 left)
+        await GamingApeClubInstance.premint(1, proof3, {
+            from: accounts[3],
+            value: String(price),
+        });
+
+        // failed due to exceed
+        await truffleAssert.reverts(
+            GamingApeClubInstance.premint(1, proof3, {
+                from: accounts[3],
+                value: String(price),
+            }),
+            ErrorMessage.LimitExceeded
+        );
+
+        assert.equal(
+            (
+                await GamingApeClubInstance.getPresaleMints(accounts[3], false)
+            ).toString(),
+            '1'
+        );
+
+        assert.equal(
+            (
+                await GamingApeClubInstance.getPresaleMints(accounts[3], true)
+            ).toString(),
+            '0'
+        );
+
+        assert.equal(
+            (
+                await GamingApeClubInstance.getPresaleMints(accounts[1], false)
+            ).toString(),
+            '1'
+        );
+
+        assert.equal(
+            (
+                await GamingApeClubInstance.getPresaleMints(accounts[1], true)
+            ).toString(),
+            '0'
+        );
+
+        // failed due to exceed
+        await truffleAssert.reverts(
+            GamingApeClubInstance.premint(1, proof1, {
+                from: accounts[1],
+                value: String(price),
+            }),
+            ErrorMessage.LimitExceeded
+        );
+
+        // after reset
+        await GamingApeClubInstance.setMintDates(now, now, later, later);
+
+        // success (1 left)
+        await GamingApeClubInstance.premint(1, proof1, {
+            from: accounts[1],
+            value: String(price),
+        });
+
+        // failed due to exceed
+        await truffleAssert.reverts(
+            GamingApeClubInstance.premint(1, proof1, {
+                from: accounts[1],
+                value: String(price),
+            }),
+            ErrorMessage.LimitExceeded
+        );
+
+        // success (0 left)
+        await GamingApeClubInstance.premint(1, proof3, {
+            from: accounts[3],
+            value: String(price),
+        });
+
+        assert.equal(
+            (
+                await GamingApeClubInstance.getPresaleMints(accounts[3], false)
+            ).toString(),
+            '1'
+        );
+
+        assert.equal(
+            (
+                await GamingApeClubInstance.getPresaleMints(accounts[3], true)
+            ).toString(),
+            '1'
+        );
+
+        assert.equal(
+            (
+                await GamingApeClubInstance.getPublicMints(accounts[3])
+            ).toString(),
+            '0'
+        );
+
+        assert.equal(
+            (
+                await GamingApeClubInstance.getPresaleMints(accounts[1], false)
+            ).toString(),
+            '1'
+        );
+
+        assert.equal(
+            (
+                await GamingApeClubInstance.getPresaleMints(accounts[1], true)
+            ).toString(),
+            '1'
+        );
+
         assert.equal(
             (
                 await GamingApeClubInstance.getPublicMints(accounts[1])
@@ -478,6 +650,7 @@ contract('GamingApeClub', (accounts) => {
 
         const { GamingApeClubInstance, price } = await buildInstance(
             now,
+            later,
             later,
             later,
             10, // supply 10, 5 left
@@ -540,7 +713,7 @@ contract('GamingApeClub', (accounts) => {
 
         assert.equal(
             (
-                await GamingApeClubInstance.getPresaleMints(accounts[4])
+                await GamingApeClubInstance.getPresaleMints(accounts[4], false)
             ).toString(),
             '1'
         );
@@ -553,7 +726,7 @@ contract('GamingApeClub', (accounts) => {
 
         assert.equal(
             (
-                await GamingApeClubInstance.getPresaleMints(accounts[1])
+                await GamingApeClubInstance.getPresaleMints(accounts[1], false)
             ).toString(),
             '4'
         );
@@ -573,6 +746,7 @@ contract('GamingApeClub', (accounts) => {
             later,
             later,
             later,
+            later,
             10, // supply 10, 5 left
             undefined,
             1
@@ -585,7 +759,12 @@ contract('GamingApeClub', (accounts) => {
         );
 
         // activate mint
-        const tx0 = await GamingApeClubInstance.setMintDates(later, later, now);
+        const tx0 = await GamingApeClubInstance.setMintDates(
+            later,
+            later,
+            later,
+            now
+        );
         console.log(`Gas to set mint dates: ${tx0.receipt.gasUsed}`);
 
         // fails due to exceeding limit
@@ -663,7 +842,7 @@ contract('GamingApeClub', (accounts) => {
         );
         assert.equal(
             (
-                await GamingApeClubInstance.getPresaleMints(accounts[1])
+                await GamingApeClubInstance.getPresaleMints(accounts[1], false)
             ).toString(),
             '0'
         );
@@ -679,7 +858,7 @@ contract('GamingApeClub', (accounts) => {
         );
         assert.equal(
             (
-                await GamingApeClubInstance.getPresaleMints(accounts[4])
+                await GamingApeClubInstance.getPresaleMints(accounts[4], false)
             ).toString(),
             '0'
         );
