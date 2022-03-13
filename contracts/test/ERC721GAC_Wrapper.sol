@@ -45,6 +45,11 @@ contract ERC721GACWrapper is ERC721GAC {
         return _numberMintedPublic(user);
     }
 
+    function auxMintCount(address user) external view returns (uint256) {
+        return _numberMintedAux(user);
+    }
+
+
     function privateMintCount(address user) external view returns (uint256) {
         return _numberMintedPrivate(user);
     }

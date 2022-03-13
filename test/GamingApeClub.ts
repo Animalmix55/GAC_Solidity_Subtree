@@ -476,7 +476,7 @@ contract('GamingApeClub', (accounts) => {
         );
     });
 
-    it.only('calls premint (before/after reset)', async () => {
+    it('calls premint (before/after reset)', async () => {
         const now = Math.floor(Date.now() / 1000);
         const later = Math.floor(new Date(5000, 12).valueOf() / 1000);
 

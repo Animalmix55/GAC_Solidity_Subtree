@@ -407,9 +407,13 @@ contract('ERC721GAC', (accounts) => {
             true,
             MintType.Private
         );
+        // succeeds minting two (aux, unsafe)
+        await instance.mint(accounts[0], accounts[0], 1, false, MintType.Aux);
+        // succeeds minting two (aux, safe)
+        await instance.mint(accounts[0], accounts[0], 2, true, MintType.Aux);
 
         // assert balance changed
-        assert.equal((await instance.balanceOf(accounts[0])).toString(), '5');
+        assert.equal((await instance.balanceOf(accounts[0])).toString(), '8');
 
         // assert owner set
         assert.equal(await instance.ownerOf(0), accounts[0]);
@@ -417,11 +421,18 @@ contract('ERC721GAC', (accounts) => {
         assert.equal(await instance.ownerOf(2), accounts[0]);
         assert.equal(await instance.ownerOf(3), accounts[0]);
         assert.equal(await instance.ownerOf(4), accounts[0]);
-        await truffleAssert.fails(instance.ownerOf(5)); // doesn't exist
+        assert.equal(await instance.ownerOf(5), accounts[0]);
+        assert.equal(await instance.ownerOf(6), accounts[0]);
+        assert.equal(await instance.ownerOf(7), accounts[0]);
+        await truffleAssert.fails(instance.ownerOf(8)); // doesn't exist
 
         // assert mint counts set
         assert.equal(
             (await instance.privateMintCount(accounts[0])).toString(),
+            '3'
+        );
+        assert.equal(
+            (await instance.auxMintCount(accounts[0])).toString(),
             '3'
         );
         assert.equal(
