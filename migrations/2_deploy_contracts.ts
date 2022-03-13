@@ -8,10 +8,10 @@ module.exports = (artifacts: Truffle.Artifacts, web3: Web3) => {
             100,
             1,
             '100000000000000000',
-            1645984500,
-            Date.now() * 10,
-            Date.now() * 10,
-            1645984500,
+            Math.floor(Date.now() / 1000),
+            Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 15, // 15 days from now
+            Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30, // 30 days from now
+            Math.floor(Date.now() / 1000),
             'test/'
         );
     };
