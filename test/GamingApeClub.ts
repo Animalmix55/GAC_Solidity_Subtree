@@ -142,7 +142,7 @@ contract('GamingApeClub', (accounts) => {
                     false
                 )
             ).toString(),
-            String(10)
+            String(10 + NUM_INITIAL_MINTS)
         );
 
         // fails if no supply left
