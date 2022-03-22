@@ -20,6 +20,8 @@ enum ErrorMessage {
     InsufficientRemaining = 'Insuf. amount',
 }
 
+const NUM_INITIAL_MINTS = 5;
+
 contract('GamingApeClub', (accounts) => {
     const getTestWhitelist = (size: number) => {
         return Array.from(new Array(size)).map(
@@ -86,10 +88,20 @@ contract('GamingApeClub', (accounts) => {
             String(price)
         );
 
-        // mints 5 initially
+        // mints NUM_INITIAL_MINTS initially
         assert.equal(
             (await GamingApeClubInstance.totalSupply()).toString(),
-            '5'
+            String(NUM_INITIAL_MINTS)
+        );
+
+        assert.equal(
+            (
+                await GamingApeClubInstance.getPresaleMints(
+                    GamingApeClubInstance.address,
+                    false
+                )
+            ).toString(),
+            String(NUM_INITIAL_MINTS)
         );
     });
 
@@ -99,7 +111,7 @@ contract('GamingApeClub', (accounts) => {
             undefined,
             undefined,
             undefined,
-            15 // 5 used on deploy
+            NUM_INITIAL_MINTS + 10 // NUM_INITIAL_MINTS used on deploy
         );
 
         // fails if not owner
@@ -125,9 +137,12 @@ contract('GamingApeClub', (accounts) => {
         );
         assert.equal(
             (
-                await GamingApeClubInstance.getPresaleMints(accounts[0], false)
+                await GamingApeClubInstance.getPresaleMints(
+                    GamingApeClubInstance.address,
+                    false
+                )
             ).toString(),
-            '15'
+            String(10)
         );
 
         // fails if no supply left
@@ -275,7 +290,7 @@ contract('GamingApeClub', (accounts) => {
         );
 
         const disbursmentAddresses = [
-            '0x568bFbBD4F4e4CA9Fb15729A61E660786207e94f',
+            '0x4C21f55d3Ef836aDeFc5b0A9c9C6908C4F8bD545',
             '0x7436F0949BCa6b6C6fD766b6b9AA57417B0314A9',
             '0x13c4d22a8dbB2559B516E10FE0DE47ba4b4A03EB',
             '0xB3D665d27A1AE8F2f3C32cB1178c9E749ce00714',
@@ -349,7 +364,7 @@ contract('GamingApeClub', (accounts) => {
             later,
             later,
             later,
-            7 // supply 7, 2 left
+            NUM_INITIAL_MINTS + 2 // 2 left
         );
 
         const whitelist = getTestWhitelist(30).concat(...accounts); // whitelist
@@ -485,7 +500,7 @@ contract('GamingApeClub', (accounts) => {
             later,
             later,
             later,
-            9, // supply 9, 4 left
+            NUM_INITIAL_MINTS + 4, // 4 left
             undefined,
             1
         );
@@ -653,7 +668,7 @@ contract('GamingApeClub', (accounts) => {
             later,
             later,
             later,
-            10, // supply 10, 5 left
+            NUM_INITIAL_MINTS + 5, // 5 left
             undefined,
             4
         );
@@ -747,7 +762,7 @@ contract('GamingApeClub', (accounts) => {
             later,
             later,
             later,
-            10, // supply 10, 5 left
+            NUM_INITIAL_MINTS + 5, // 5 left
             undefined,
             1
         );
@@ -869,7 +884,7 @@ contract('GamingApeClub', (accounts) => {
 
         assert.equal(
             (await GamingApeClubInstance.balanceOf(accounts[0])).toString(),
-            '5'
+            String(NUM_INITIAL_MINTS)
         );
         assert.equal(await GamingApeClubInstance.ownerOf(0), accounts[0]);
 
@@ -887,7 +902,7 @@ contract('GamingApeClub', (accounts) => {
 
         assert.equal(
             (await GamingApeClubInstance.balanceOf(accounts[0])).toString(),
-            '4'
+            String(NUM_INITIAL_MINTS - 1)
         );
         assert.equal(await GamingApeClubInstance.ownerOf(4), accounts[0]);
 

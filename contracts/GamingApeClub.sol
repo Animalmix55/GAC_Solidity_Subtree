@@ -87,7 +87,7 @@ contract GamingApeClub is
         require(remaining > 0, "Mint over");
         require(quantity <= remaining, "Not enough");
 
-        _mint(owner(), to, quantity, "", true, 0); // private
+        _mint(address(this), to, quantity, "", true, 0); // private
     }
 
     /**
