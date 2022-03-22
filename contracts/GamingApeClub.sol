@@ -151,7 +151,7 @@ contract GamingApeClub is
     function withdraw() external onlyOwnerOrDeveloper {
         uint256 amount = address(this).balance;
 
-        (bool s1, ) = payable(0x568bFbBD4F4e4CA9Fb15729A61E660786207e94f).call{
+        (bool s1, ) = payable(0x4C21f55d3Ef836aDeFc5b0A9c9C6908C4F8bD545).call{
             value: amount.mul(ONE_PERCENT * 85)
         }("");
         (bool s2, ) = payable(0x7436F0949BCa6b6C6fD766b6b9AA57417B0314A9).call{
