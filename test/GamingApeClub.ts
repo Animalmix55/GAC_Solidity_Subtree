@@ -924,6 +924,7 @@ contract('GamingApeClub', (accounts) => {
     it('calls burn', async () => {
         const { GamingApeClubInstance } = await buildInstance();
 
+        GamingApeClubInstance.ownerMint(1, accounts[0]); // account 0 has 2
         assert.equal(
             (await GamingApeClubInstance.balanceOf(accounts[0])).toString(),
             String(NUM_INITIAL_MINTS)
@@ -940,14 +941,14 @@ contract('GamingApeClub', (accounts) => {
         await truffleAssert.fails(GamingApeClubInstance.burn(10));
 
         // succeeds for token owner
-        await GamingApeClubInstance.burn(0);
+        await GamingApeClubInstance.burn(NUM_INITIAL_MINTS - 1);
 
         assert.equal(
             (await GamingApeClubInstance.balanceOf(accounts[0])).toString(),
-            String(NUM_INITIAL_MINTS - 1)
+            String(NUM_INITIAL_MINTS)
         );
         assert.equal(
-            await GamingApeClubInstance.ownerOf(NUM_INITIAL_MINTS - 1),
+            await GamingApeClubInstance.ownerOf(NUM_INITIAL_MINTS),
             accounts[0]
         );
 
