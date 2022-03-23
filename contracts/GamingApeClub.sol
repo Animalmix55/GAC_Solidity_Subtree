@@ -19,6 +19,7 @@ contract GamingApeClub is
     using PRBMathUD60x18 for uint256;
 
     uint256 private constant ONE_PERCENT = 10000000000000000; // 1% (18 decimals)
+    uint8 private constant AUCTION_QUANTITY = 1; // 1 for auction
 
     bytes32 private _merkleRoot;
     uint256 public mintPrice;
@@ -27,6 +28,7 @@ contract GamingApeClub is
     uint256 public whitelistEnd;
     uint256 public publicStart;
     string private _baseUri;
+    uint16 public maxWhitelistSupply;
     uint16 public maximumSupply;
     uint16 public maxPerWallet;
 
@@ -34,6 +36,7 @@ contract GamingApeClub is
         address devAddress,
         uint16 maxSupply,
         uint16 walletMax,
+        uint16 whitelistMax,
         uint256 price,
         uint256 presaleMintStart,
         uint256 presaleResetTime,
@@ -41,12 +44,14 @@ contract GamingApeClub is
         uint256 publicMintStart,
         string memory baseUri
     ) ERC721GAC("Gaming Ape Club", "GAC") DeveloperAccess(devAddress) {
-        require(maxSupply >= 5, "Bad supply");
+        require(maxSupply >= AUCTION_QUANTITY, "Bad supply");
+        require(whitelistMax <= maxSupply, "Bad wl max");
 
         // GLOBALS
         maximumSupply = maxSupply;
         maxPerWallet = walletMax;
         mintPrice = price;
+        maxWhitelistSupply = whitelistMax;
 
         // CONFIGURE PRESALE Mint
         whitelistStart = presaleMintStart;
@@ -59,8 +64,8 @@ contract GamingApeClub is
         // SET BASEURI
         _baseUri = baseUri;
 
-        // MINT 5 AUCTION NFTS
-        ownerMint(5, msg.sender);
+        // MINT AUCTION NFTS
+        ownerMint(AUCTION_QUANTITY, msg.sender);
     }
 
     // -------------------------------------------- OWNER/DEV ONLY ----------------------------------------
@@ -123,6 +128,16 @@ contract GamingApeClub is
      */
     function setMerkleRoot(bytes32 root) public onlyOwnerOrDeveloper {
         _merkleRoot = root;
+    }
+
+    /**
+     * Updates the supply cap on whitelist.
+     * If a given transaction will cause the supply to increase
+     * beyond this number, it will fail.
+     */
+    function setWhitelistMaxSupply(uint16 max) public onlyOwnerOrDeveloper {
+        require(max <= maximumSupply, "Bad wl max");
+        maxWhitelistSupply = max;
     }
 
     /**
@@ -205,7 +220,7 @@ contract GamingApeClub is
      * @param proof - the merkle proof from the root to the whitelisted address.
      */
     function premint(uint16 amount, bytes32[] memory proof) public payable nonReentrant {
-        uint256 remaining = maximumSupply - _currentIndex;
+        uint256 remaining = maxWhitelistSupply - _currentIndex;
 
         require(remaining > 0, "Mint over");
         require(remaining >= amount, "Insuf. amount");

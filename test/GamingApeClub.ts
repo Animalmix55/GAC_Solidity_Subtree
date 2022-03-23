@@ -18,9 +18,13 @@ enum ErrorMessage {
     LimitExceeded = 'Limit exceeded',
     NotOwner = 'Not owner',
     InsufficientRemaining = 'Insuf. amount',
+    BadWhitelistMax = 'Bad wl max',
 }
 
-const NUM_INITIAL_MINTS = 5;
+/**
+ * The number of auction mints
+ */
+const NUM_INITIAL_MINTS = 1;
 
 contract('GamingApeClub', (accounts) => {
     const getTestWhitelist = (size: number) => {
@@ -35,6 +39,7 @@ contract('GamingApeClub', (accounts) => {
         presaleResetTime: number | undefined = undefined,
         publicStart: number | undefined = undefined,
         maxSupply = 10000,
+        whitelistMax?: number,
         price = 10,
         walletMax = 1,
         devAddress = accounts[9],
@@ -48,6 +53,7 @@ contract('GamingApeClub', (accounts) => {
             devAddress,
             maxSupply,
             walletMax,
+            whitelistMax ?? maxSupply,
             price,
             presaleStart ?? now,
             presaleResetTime ?? later,
@@ -230,7 +236,7 @@ contract('GamingApeClub', (accounts) => {
             '0x7465737400000000000000000000000000000000000000000000000000000000';
 
         // fails for non owner/dev
-        truffleAssert.reverts(
+        await truffleAssert.reverts(
             GamingApeClubInstance.setMerkleRoot(merkleRoot, {
                 from: accounts[1],
             }),
@@ -243,6 +249,39 @@ contract('GamingApeClub', (accounts) => {
         await GamingApeClubInstance.setMerkleRoot(merkleRoot, {
             from: devAddress,
         });
+    });
+
+    it('calls setWhitelistMaxSupply', async () => {
+        const { GamingApeClubInstance, devAddress, maxSupply } =
+            await buildInstance();
+
+        // fails for non owner/dev
+        await truffleAssert.reverts(
+            GamingApeClubInstance.setWhitelistMaxSupply(maxSupply, {
+                from: accounts[1],
+            }),
+            ErrorMessage.NotOwnerOrDev
+        );
+
+        // fails for exceeding supply
+        await truffleAssert.reverts(
+            GamingApeClubInstance.setWhitelistMaxSupply(maxSupply + 1, {
+                from: accounts[0],
+            }),
+            ErrorMessage.BadWhitelistMax
+        );
+
+        await GamingApeClubInstance.setWhitelistMaxSupply(maxSupply);
+
+        // works for dev
+        await GamingApeClubInstance.setWhitelistMaxSupply(maxSupply, {
+            from: devAddress,
+        });
+
+        assert.equal(
+            (await GamingApeClubInstance.maxWhitelistSupply()).toString(),
+            String(maxSupply)
+        );
     });
 
     it('calls setMintDates', async () => {
@@ -500,6 +539,7 @@ contract('GamingApeClub', (accounts) => {
             later,
             later,
             later,
+            NUM_INITIAL_MINTS + 10, // 10 left
             NUM_INITIAL_MINTS + 4, // 4 left
             undefined,
             1
@@ -670,6 +710,7 @@ contract('GamingApeClub', (accounts) => {
             later,
             NUM_INITIAL_MINTS + 5, // 5 left
             undefined,
+            undefined,
             4
         );
 
@@ -763,6 +804,7 @@ contract('GamingApeClub', (accounts) => {
             later,
             later,
             NUM_INITIAL_MINTS + 5, // 5 left
+            undefined,
             undefined,
             1
         );
@@ -904,7 +946,10 @@ contract('GamingApeClub', (accounts) => {
             (await GamingApeClubInstance.balanceOf(accounts[0])).toString(),
             String(NUM_INITIAL_MINTS - 1)
         );
-        assert.equal(await GamingApeClubInstance.ownerOf(4), accounts[0]);
+        assert.equal(
+            await GamingApeClubInstance.ownerOf(NUM_INITIAL_MINTS - 1),
+            accounts[0]
+        );
 
         // fails if attempt to burn again
         await truffleAssert.fails(GamingApeClubInstance.burn(0));

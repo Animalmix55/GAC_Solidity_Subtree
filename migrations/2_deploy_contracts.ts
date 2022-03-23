@@ -7,6 +7,7 @@ module.exports = (artifacts: Truffle.Artifacts, web3: Web3) => {
             accounts[0],
             100,
             1,
+            60,
             '100000000000000000',
             Math.floor(Date.now() / 1000),
             Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 15, // 15 days from now
