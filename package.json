@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.3.2",
+    "@rari-capital/solmate": "^6.2.0",
     "@truffle/hdwallet-provider": "^2.0.1",
     "@typechain/truffle-v5": "^5.1.0",
     "@typechain/web3-v1": "^4.0.0",
