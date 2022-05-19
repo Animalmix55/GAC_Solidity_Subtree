@@ -44,6 +44,51 @@ contract GACStakingChild is FxBaseChildTunnel, Ownable, DeveloperAccess {
         address tokenAddress
     ) FxBaseChildTunnel(fxChild) DeveloperAccess(devAddress) {
         GACXP = IGACXP(tokenAddress);
+
+        // configure default reward scheme
+        uint128[] memory amounts = new uint128[](13);
+        uint128[] memory newRewards = new uint128[](13);
+
+        amounts[0] = 1;
+        newRewards[0] = 80;
+
+        amounts[1] = 2;
+        newRewards[1] = 90;
+
+        amounts[2] = 3;
+        newRewards[2] = 110;
+
+        amounts[3] = 4;
+        newRewards[3] = 140;
+
+        amounts[4] = 5;
+        newRewards[4] = 180;
+
+        amounts[5] = 7;
+        newRewards[5] = 245;
+
+        amounts[6] = 10;
+        newRewards[6] = 325;
+
+        amounts[7] = 15;
+        newRewards[7] = 420;
+
+        amounts[8] = 20;
+        newRewards[8] = 525;
+
+        amounts[9] = 25;
+        newRewards[9] = 645;
+
+        amounts[10] = 30;
+        newRewards[10] = 785;
+
+        amounts[11] = 40;
+        newRewards[11] = 945;
+
+        amounts[12] = 50;
+        newRewards[12] = 1125;
+
+        setRewards(amounts, newRewards);
     }
 
     // -------------------------------------------- ADMIN FUNCTIONS --------------------------------------------------
@@ -70,6 +115,34 @@ contract GACStakingChild is FxBaseChildTunnel, Ownable, DeveloperAccess {
     {
         fxRootTunnel = _fxRootTunnel;
     }
+
+    /**
+     * Resets the reward calculation schema.
+     * @param amounts - a list of held amounts in increasing order.
+     * @param newRewards - a parallel list to amounts containing the summative yields per period for the respective amount.
+     */
+    function setRewards(uint128[] memory amounts, uint128[] memory newRewards)
+        public
+        onlyOwnerOrDeveloper
+    {
+        require(amounts.length == newRewards.length, "Length mismatch");
+        require(amounts.length > 0, "Too few rewards");
+        require(amounts[0] == 1, "Must begin with one");
+
+        uint128 lastAmount;
+        for (uint256 i; i < amounts.length; i++) {
+            require(amounts[i] > lastAmount, "Not in order");
+            lastAmount = amounts[i];
+
+            Reward memory currentReward;
+            currentReward.amount = newRewards[i];
+            if (amounts.length > i + 1) currentReward.nextTier = amounts[i + 1];
+
+            rewards[amounts[i]] = currentReward;
+        }
+    }
+
+    // ---------------------------------------------- PUBLIC FUNCTIONS -----------------------------------------------
 
     /**
      * Claims the pending reward for the transaction sender.
@@ -132,20 +205,25 @@ contract GACStakingChild is FxBaseChildTunnel, Ownable, DeveloperAccess {
      */
     function _updateBalance(address user) internal {
         Stake storage stake = stakes[user];
-        
+
         uint256 reward = _currentReward(stake);
         stake.lastUpdated = uint128(block.timestamp);
 
-        if(reward > 0) GACXP.mint(reward, user);
+        if (reward > 0) GACXP.mint(reward, user);
     }
 
     /**
      * Calculates the current pending reward based on the inputted stake struct.
      * @param stake - the stake for the user to calculate upon.
      */
-    function _currentReward(Stake memory stake) internal view returns (uint256) {
+    function _currentReward(Stake memory stake)
+        internal
+        view
+        returns (uint256)
+    {
         uint256 periodicYield = _calculateReward(stake.amount);
-        uint256 periodsPassed = (block.timestamp - stake.lastUpdated) / YIELD_PERIOD;
+        uint256 periodsPassed = (block.timestamp - stake.lastUpdated) /
+            YIELD_PERIOD;
 
         uint256 reward = periodicYield * periodsPassed;
         return reward;
@@ -156,11 +234,7 @@ contract GACStakingChild is FxBaseChildTunnel, Ownable, DeveloperAccess {
      * @param amount - the amount of tokens staked.
      * @return reward - the dividend per day.
      */
-    function _calculateReward(uint128 amount)
-        internal
-        view
-        returns (uint256)
-    {
+    function _calculateReward(uint128 amount) internal view returns (uint256) {
         if (amount == 0) return 0;
 
         uint256 reward;
