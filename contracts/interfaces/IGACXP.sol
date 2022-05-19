@@ -2,13 +2,12 @@
 
 pragma solidity ^0.8.10;
 
-import "@rari-capital/solmate/src/tokens/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * Author: Cory Cherven (Animalmix55/ToxicPizza)
  */
-interface IGACXP is ERC20 {
+interface IGACXP is IERC20 {
     /**
      * Mints to the given account from the sender provided the sender is authorized.
      */
