@@ -131,10 +131,11 @@ contract GACXP is ERC20, IGACXP, Ownable, DeveloperAccess, ReentrancyGuard {
 
     /**
      * Reduces the amount of tokens the user is allowed to mint.
-     * @dev does nothing for dev/owner.
+     * @dev does nothing for dev/owner. Does nothing if allowance is max.
      */
     function _reduceMintAllowance(address user, uint256 amount) internal {
         if (user == developer() || user == owner()) return;
+        if (_mintAllowance[user] == type(uint256).max) return;
 
         _mintAllowance[user] -= amount;
     }

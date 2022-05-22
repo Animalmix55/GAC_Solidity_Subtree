@@ -208,3 +208,5 @@ contract('GACXP', (accounts) => {
         );
     });
 });
+
+export default {};

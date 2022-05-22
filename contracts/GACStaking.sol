@@ -53,7 +53,7 @@ contract GACStaking is FxBaseRootTunnel, Ownable, DeveloperAccess {
      */
     function unstake(uint256[] calldata tokenIds) external {
         for (uint256 i; i < tokenIds.length; i++) {
-            require(staked[msg.sender][tokenIds[i]], "Not allowed");
+            require(staked[msg.sender][tokenIds[i]], "Not owned");
             gacToken.transferFrom(address(this), msg.sender, tokenIds[i]);
             staked[msg.sender][tokenIds[i]] = false;
         }

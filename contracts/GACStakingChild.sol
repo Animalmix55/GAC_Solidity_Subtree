@@ -15,7 +15,6 @@ import "./interfaces/IGACXP.sol";
  */
 contract GACStakingChild is FxBaseChildTunnel, Ownable, DeveloperAccess {
     uint256 constant YIELD_PERIOD = 1 days;
-
     IGACXP public GACXP;
 
     struct Reward {
@@ -50,43 +49,43 @@ contract GACStakingChild is FxBaseChildTunnel, Ownable, DeveloperAccess {
         uint128[] memory newRewards = new uint128[](13);
 
         amounts[0] = 1;
-        newRewards[0] = 80;
+        newRewards[0] = 80000000000000000000;
 
         amounts[1] = 2;
-        newRewards[1] = 90;
+        newRewards[1] = 90000000000000000000;
 
         amounts[2] = 3;
-        newRewards[2] = 110;
+        newRewards[2] = 110000000000000000000;
 
         amounts[3] = 4;
-        newRewards[3] = 140;
+        newRewards[3] = 140000000000000000000;
 
         amounts[4] = 5;
-        newRewards[4] = 180;
+        newRewards[4] = 180000000000000000000;
 
         amounts[5] = 7;
-        newRewards[5] = 245;
+        newRewards[5] = 245000000000000000000;
 
         amounts[6] = 10;
-        newRewards[6] = 325;
+        newRewards[6] = 325000000000000000000;
 
         amounts[7] = 15;
-        newRewards[7] = 420;
+        newRewards[7] = 420000000000000000000;
 
         amounts[8] = 20;
-        newRewards[8] = 525;
+        newRewards[8] = 525000000000000000000;
 
         amounts[9] = 25;
-        newRewards[9] = 645;
+        newRewards[9] = 645000000000000000000;
 
         amounts[10] = 30;
-        newRewards[10] = 785;
+        newRewards[10] = 785000000000000000000;
 
         amounts[11] = 40;
-        newRewards[11] = 945;
+        newRewards[11] = 945000000000000000000;
 
         amounts[12] = 50;
-        newRewards[12] = 1125;
+        newRewards[12] = 1125000000000000000000;
 
         setRewards(amounts, newRewards);
     }
@@ -158,8 +157,49 @@ contract GACStakingChild is FxBaseChildTunnel, Ownable, DeveloperAccess {
     function getReward(address user) external view returns (uint256) {
         return _currentReward(stakes[user]);
     }
+    
+    /**
+     * Dumps the rewards currently programmed in per tier as two parallel arrays
+     * defining (amount, yield) pairs.
+     *
+     * @return (uint128[] holdingAmounts, uint128[] rewardAmounts)
+     */
+    function dumpRewards() external view returns (uint128[] memory, uint128[] memory) {
+        uint128 numTiers = _countRewardsTiers();
+
+        uint128[] memory holdingAmounts = new uint128[](numTiers);
+        uint128[] memory rewardAmounts = new uint128[](numTiers);
+
+        uint128 nextTier = 1;
+        uint128 index = 0;
+
+        while (nextTier != 0) {
+            holdingAmounts[index] = nextTier;
+            rewardAmounts[index] = rewards[nextTier].amount;
+
+            nextTier = rewards[nextTier].nextTier;
+            index++;
+        }
+
+        return (holdingAmounts, rewardAmounts);
+    }
 
     // -------------------------------------------- INTERNAL FUNCTIONS ----------------------------------------------
+
+    /**
+     * Counts the number of rewards tiers in the linked list starting at 1.
+     */
+    function _countRewardsTiers() internal view returns (uint128) {
+        uint128 count = 0;
+        uint128 nextTier = 1;
+
+        while (nextTier != 0) {
+            count++;
+            nextTier = rewards[nextTier].nextTier;
+        }
+
+        return count;
+    }
 
     /**
      * @notice Process message received from FxChild
@@ -244,7 +284,7 @@ contract GACStakingChild is FxBaseChildTunnel, Ownable, DeveloperAccess {
             Reward memory currentReward = rewards[next];
             reward += currentReward.amount;
             next = currentReward.nextTier;
-        } while (next != 0 && next >= amount);
+        } while (next != 0 && next <= amount);
 
         return reward;
     }
