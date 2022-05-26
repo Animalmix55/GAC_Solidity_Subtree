@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 
 contract MockERC721 is ERC721Enumerable, Ownable {
     constructor(string memory name, string memory symbol) ERC721(name, symbol) {}
+    string private _baseUri;
 
     /**
      * Public so that we can test
@@ -17,6 +18,16 @@ contract MockERC721 is ERC721Enumerable, Ownable {
         for (i; i < ids.length; i++) {
             _mint(user, ids[i]);
         }
+    }
+
+    /**
+     * Sets the base URI for all tokens
+     *
+     * @dev be sure to terminate with a slash
+     * @param uri - the target base uri (ex: 'https://google.com/')
+     */
+    function setBaseURI(string calldata uri) public {
+        _baseUri = uri;
     }
 
     /**
@@ -36,6 +47,16 @@ contract MockERC721 is ERC721Enumerable, Ownable {
         for (i; i < ids.length; i++) {
             _burn(ids[i]);
         }
+    }
+
+    // ------------------------------------------- INTERNAL -------------------------------------------
+
+    /**
+     * @dev Base URI for computing {tokenURI}. If set, the resulting URI for each
+     * token will be the concatenation of the `baseURI` and the `tokenId`.
+     */
+    function _baseURI() internal view virtual override returns (string memory) {
+        return _baseUri;
     }
 
     receive() payable external {
