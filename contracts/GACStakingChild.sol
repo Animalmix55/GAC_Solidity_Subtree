@@ -16,6 +16,7 @@ import "./interfaces/IGACXP.sol";
 contract GACStakingChild is FxBaseChildTunnel, Ownable, DeveloperAccess {
     uint256 constant YIELD_PERIOD = 1 days;
     IGACXP public GACXP;
+    uint256 public firstTimeBonus = 80000000000000000000;
 
     struct Reward {
         uint128 amount;
@@ -24,7 +25,8 @@ contract GACStakingChild is FxBaseChildTunnel, Ownable, DeveloperAccess {
 
     struct Stake {
         uint128 amount;
-        uint128 lastUpdated;
+        uint120 lastUpdated;
+        bool hasClaimed;
     }
 
     /**
@@ -45,8 +47,8 @@ contract GACStakingChild is FxBaseChildTunnel, Ownable, DeveloperAccess {
         GACXP = IGACXP(tokenAddress);
 
         // configure default reward scheme
-        uint128[] memory amounts = new uint128[](13);
-        uint128[] memory newRewards = new uint128[](13);
+        uint128[] memory amounts = new uint128[](16);
+        uint128[] memory newRewards = new uint128[](16);
 
         amounts[0] = 1;
         newRewards[0] = 80000000000000000000;
@@ -64,28 +66,37 @@ contract GACStakingChild is FxBaseChildTunnel, Ownable, DeveloperAccess {
         newRewards[4] = 180000000000000000000;
 
         amounts[5] = 7;
-        newRewards[5] = 245000000000000000000;
+        newRewards[5] = 250000000000000000000;
 
         amounts[6] = 10;
-        newRewards[6] = 325000000000000000000;
+        newRewards[6] = 350000000000000000000;
 
         amounts[7] = 15;
-        newRewards[7] = 420000000000000000000;
+        newRewards[7] = 460000000000000000000;
 
         amounts[8] = 20;
-        newRewards[8] = 525000000000000000000;
+        newRewards[8] = 590000000000000000000;
 
         amounts[9] = 25;
-        newRewards[9] = 645000000000000000000;
+        newRewards[9] = 730000000000000000000;
 
         amounts[10] = 30;
-        newRewards[10] = 785000000000000000000;
+        newRewards[10] = 880000000000000000000;
 
         amounts[11] = 40;
-        newRewards[11] = 945000000000000000000;
+        newRewards[11] = 1090000000000000000000;
 
         amounts[12] = 50;
-        newRewards[12] = 1125000000000000000000;
+        newRewards[12] = 1310000000000000000000;
+
+        amounts[13] = 60;
+        newRewards[13] = 1540000000000000000000;
+
+        amounts[14] = 75;
+        newRewards[14] = 1835000000000000000000;
+
+        amounts[15] = 100;
+        newRewards[15] = 2235000000000000000000;
 
         setRewards(amounts, newRewards);
     }
@@ -113,6 +124,14 @@ contract GACStakingChild is FxBaseChildTunnel, Ownable, DeveloperAccess {
         onlyOwnerOrDeveloper
     {
         fxRootTunnel = _fxRootTunnel;
+    }
+
+    /**
+     * Sets/updates the bonus for claiming for the first time.
+     * @param _bonus - the new bonus
+     */
+    function setFirstTimeBonus(uint256 _bonus) external onlyOwnerOrDeveloper {
+        firstTimeBonus = _bonus;
     }
 
     /**
@@ -164,14 +183,18 @@ contract GACStakingChild is FxBaseChildTunnel, Ownable, DeveloperAccess {
     function balanceOf(address user) external view returns (uint256) {
         return stakes[user].amount;
     }
-    
+
     /**
      * Dumps the rewards currently programmed in per tier as two parallel arrays
      * defining (amount, yield) pairs.
      *
      * @return (uint128[] holdingAmounts, uint128[] rewardAmounts)
      */
-    function dumpRewards() external view returns (uint128[] memory, uint128[] memory) {
+    function dumpRewards()
+        external
+        view
+        returns (uint128[] memory, uint128[] memory)
+    {
         uint128 numTiers = _countRewardsTiers();
 
         uint128[] memory holdingAmounts = new uint128[](numTiers);
@@ -254,9 +277,12 @@ contract GACStakingChild is FxBaseChildTunnel, Ownable, DeveloperAccess {
         Stake storage stake = stakes[user];
 
         uint256 reward = _currentReward(stake);
-        stake.lastUpdated = uint128(block.timestamp);
+        stake.lastUpdated = uint120(block.timestamp);
 
-        if (reward > 0) GACXP.mint(reward, user);
+        if (reward > 0) {
+            if (!stake.hasClaimed) stake.hasClaimed = true;
+            GACXP.mint(reward, user);
+        }
     }
 
     /**
@@ -273,6 +299,8 @@ contract GACStakingChild is FxBaseChildTunnel, Ownable, DeveloperAccess {
             YIELD_PERIOD;
 
         uint256 reward = periodicYield * periodsPassed;
+        if (reward != 0 && !stake.hasClaimed) reward += firstTimeBonus;
+        
         return reward;
     }
 

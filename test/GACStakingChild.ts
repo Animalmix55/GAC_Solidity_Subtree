@@ -49,19 +49,22 @@ const advanceTime = async (time: number) => {
 };
 
 const initialRewards: Record<number, BN> = {
-    1: new BN('80000000000000000000'),
-    2: new BN('90000000000000000000'),
-    3: new BN('110000000000000000000'),
-    4: new BN('140000000000000000000'),
-    5: new BN('180000000000000000000'),
-    7: new BN('245000000000000000000'),
-    10: new BN('325000000000000000000'),
-    15: new BN('420000000000000000000'),
-    20: new BN('525000000000000000000'),
-    25: new BN('645000000000000000000'),
-    30: new BN('785000000000000000000'),
-    40: new BN('945000000000000000000'),
-    50: new BN('1125000000000000000000'),
+    1: new BN(web3.utils.toWei('80', 'ether')),
+    2: new BN(web3.utils.toWei('90', 'ether')),
+    3: new BN(web3.utils.toWei('110', 'ether')),
+    4: new BN(web3.utils.toWei('140', 'ether')),
+    5: new BN(web3.utils.toWei('180', 'ether')),
+    7: new BN(web3.utils.toWei('250', 'ether')),
+    10: new BN(web3.utils.toWei('350', 'ether')),
+    15: new BN(web3.utils.toWei('460', 'ether')),
+    20: new BN(web3.utils.toWei('590', 'ether')),
+    25: new BN(web3.utils.toWei('730', 'ether')),
+    30: new BN(web3.utils.toWei('880', 'ether')),
+    40: new BN(web3.utils.toWei('1090', 'ether')),
+    50: new BN(web3.utils.toWei('1310', 'ether')),
+    60: new BN(web3.utils.toWei('1540', 'ether')),
+    75: new BN(web3.utils.toWei('1835', 'ether')),
+    100: new BN(web3.utils.toWei('2235', 'ether')),
 };
 
 contract('GACStakingChild', (accounts) => {
@@ -172,19 +175,22 @@ contract('GACStakingChild', (accounts) => {
     });
 
     const updatedRewards: Record<number, BN> = {
-        1: new BN('100000000000000000000'),
-        2: new BN('200000000000000000000'),
-        3: new BN('300000000000000000000'),
-        4: new BN('400000000000000000000'),
-        5: new BN('500000000000000000000'),
-        7: new BN('700000000000000000000'),
-        10: new BN('1000000000000000000000'),
-        15: new BN('1500000000000000000000'),
-        20: new BN('2000000000000000000000'),
-        25: new BN('2500000000000000000000'),
-        30: new BN('3000000000000000000000'),
-        40: new BN('4000000000000000000000'),
-        50: new BN('5000000000000000000000'),
+        1: new BN(web3.utils.toWei('800', 'ether')),
+        2: new BN(web3.utils.toWei('900', 'ether')),
+        3: new BN(web3.utils.toWei('1100', 'ether')),
+        4: new BN(web3.utils.toWei('1400', 'ether')),
+        5: new BN(web3.utils.toWei('1800', 'ether')),
+        7: new BN(web3.utils.toWei('2500', 'ether')),
+        10: new BN(web3.utils.toWei('3500', 'ether')),
+        15: new BN(web3.utils.toWei('4600', 'ether')),
+        20: new BN(web3.utils.toWei('5900', 'ether')),
+        25: new BN(web3.utils.toWei('7300', 'ether')),
+        30: new BN(web3.utils.toWei('8800', 'ether')),
+        40: new BN(web3.utils.toWei('10900', 'ether')),
+        50: new BN(web3.utils.toWei('13100', 'ether')),
+        60: new BN(web3.utils.toWei('15400', 'ether')),
+        75: new BN(web3.utils.toWei('18350', 'ether')),
+        100: new BN(web3.utils.toWei('22350', 'ether')),
     };
 
     const newAmounts = Object.keys(updatedRewards) as unknown as number[];
@@ -349,7 +355,7 @@ contract('GACStakingChild', (accounts) => {
         await advanceTime(2000); // over one day has passed
 
         reward = await GACStakingInstance.getReward(user);
-        assert.equal(reward.toString(), web3.utils.toWei('1170'));
+        assert.equal(reward.toString(), web3.utils.toWei('1280'));
     });
 
     it('the user can claim rewards', async () => {
@@ -367,7 +373,7 @@ contract('GACStakingChild', (accounts) => {
         await advanceTime(60 * 60 * 24 + 1000); // one day has passed, plus a bit
 
         let reward = await GACStakingInstance.getReward(user);
-        assert.equal(reward.toString(), web3.utils.toWei('1170'));
+        assert.equal(reward.toString(), web3.utils.toWei('1280'));
 
         await GACStakingInstance.claimReward({ from: user });
 
@@ -375,7 +381,49 @@ contract('GACStakingChild', (accounts) => {
         assert.equal(reward.toString(), '0');
 
         const tokenBalance = await GACXPInstance.balanceOf(user);
-        assert.equal(tokenBalance.toString(), web3.utils.toWei('1170'));
+        assert.equal(tokenBalance.toString(), web3.utils.toWei('1280'));
+    });
+
+    it('the bonus only applies once', async () => {
+        const { GACStakingInstance, fxRootTunnel, GACXPInstance } =
+            await getInstance({
+                from: accounts[0],
+            });
+
+        const user = accounts[1];
+        const amount = 10;
+        await stake(GACStakingInstance, user, amount, fxRootTunnel, {
+            from: accounts[0],
+        });
+
+        await advanceTime(60 * 60 * 24 + 1000); // one day has passed, plus a bit
+
+        let reward = await GACStakingInstance.getReward(user);
+        assert.equal(reward.toString(), web3.utils.toWei('1280'));
+
+        await GACStakingInstance.claimReward({ from: user });
+
+        reward = await GACStakingInstance.getReward(user);
+        assert.equal(reward.toString(), '0');
+
+        let tokenBalance = await GACXPInstance.balanceOf(user);
+        assert.equal(tokenBalance.toString(), web3.utils.toWei('1280'));
+
+        await advanceTime(60 * 60 * 24 + 1000); // one day has passed, plus a bit
+
+        reward = await GACStakingInstance.getReward(user);
+        assert.equal(reward.toString(), web3.utils.toWei('1200'));
+
+        await GACStakingInstance.claimReward({ from: user });
+
+        reward = await GACStakingInstance.getReward(user);
+        assert.equal(reward.toString(), '0');
+
+        tokenBalance = await GACXPInstance.balanceOf(user);
+        assert.equal(
+            tokenBalance.toString(),
+            web3.utils.toWei(String(1280 + 1200))
+        );
     });
 
     it('rewards are claimed by unstaking', async () => {
@@ -393,7 +441,7 @@ contract('GACStakingChild', (accounts) => {
         await advanceTime(60 * 60 * 24 + 1000); // one day has passed, plus a bit
 
         let reward = await GACStakingInstance.getReward(user);
-        assert.equal(reward.toString(), web3.utils.toWei('1170'));
+        assert.equal(reward.toString(), web3.utils.toWei('1280'));
 
         await unstake(GACStakingInstance, user, amount, fxRootTunnel, {
             from: accounts[0],
@@ -403,7 +451,7 @@ contract('GACStakingChild', (accounts) => {
         assert.equal(reward.toString(), '0');
 
         const tokenBalance = await GACXPInstance.balanceOf(user);
-        assert.equal(tokenBalance.toString(), web3.utils.toWei('1170'));
+        assert.equal(tokenBalance.toString(), web3.utils.toWei('1280'));
     });
 
     it('rewards are claimed by staking more', async () => {
@@ -421,7 +469,7 @@ contract('GACStakingChild', (accounts) => {
         await advanceTime(60 * 60 * 24 + 1000); // one day has passed, plus a bit
 
         let reward = await GACStakingInstance.getReward(user);
-        assert.equal(reward.toString(), web3.utils.toWei('1170'));
+        assert.equal(reward.toString(), web3.utils.toWei('1280'));
 
         await stake(GACStakingInstance, user, amount, fxRootTunnel, {
             from: accounts[0],
@@ -431,7 +479,7 @@ contract('GACStakingChild', (accounts) => {
         assert.equal(reward.toString(), '0');
 
         const tokenBalance = await GACXPInstance.balanceOf(user);
-        assert.equal(tokenBalance.toString(), web3.utils.toWei('1170'));
+        assert.equal(tokenBalance.toString(), web3.utils.toWei('1280'));
 
         assert.equal(
             (await GACStakingInstance.stakes(user))[0].toString(),
