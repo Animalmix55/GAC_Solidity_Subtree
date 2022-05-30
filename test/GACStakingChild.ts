@@ -486,6 +486,42 @@ contract('GACStakingChild', (accounts) => {
             String(amount * 2)
         );
     });
+
+    it('allows the owner/dev to manually set stakes should there be an error', async () => {
+        const { GACStakingInstance, GACXPInstance, fxRootTunnel } =
+            await getInstance({
+                from: accounts[0],
+            });
+
+        // accounts[1] stakes 10
+        await stake(GACStakingInstance, accounts[1], 10, fxRootTunnel, {
+            from: accounts[0],
+        });
+
+        await advanceTime(60 * 60 * 24 + 1000); // one day has passed, plus a bit
+        let reward = await GACStakingInstance.getReward(accounts[1]);
+        assert.equal(reward.toString(), web3.utils.toWei('1280'));
+
+        await GACStakingInstance.manuallyUpdateBulkStakes(
+            [accounts[0], accounts[1]],
+            [11, 11]
+        );
+
+        reward = await GACStakingInstance.getReward(accounts[1]);
+        assert.equal(reward.toString(), web3.utils.toWei('0'));
+
+        const tokenBalance = await GACXPInstance.balanceOf(accounts[1]);
+        assert.equal(tokenBalance.toString(), web3.utils.toWei('1280'));
+
+        assert.equal(
+            (await GACStakingInstance.stakes(accounts[1]))[0].toString(),
+            '11'
+        );
+        assert.equal(
+            (await GACStakingInstance.stakes(accounts[0]))[0].toString(),
+            '11'
+        );
+    });
 });
 
 export default {};

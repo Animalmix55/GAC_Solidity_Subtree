@@ -127,6 +127,36 @@ contract GACStakingChild is FxBaseChildTunnel, Ownable, DeveloperAccess {
     }
 
     /**
+     * A manual override functionality to allow an admit to update a user's stake.
+     * @param user - the user whose stake is being updated.
+     * @param amount - the amount to set the user's stake to.
+     * @dev this will claim any existing rewards and reset timers.
+     */
+    function manuallyUpdateStake(address user, uint128 amount)
+        public
+        onlyOwnerOrDeveloper
+    {
+        _updateBalance(user);
+
+        stakes[user].amount = amount;
+    }
+
+    /**
+     * A manual override functionality to allow an admit to update many users' stakes.
+     * @param users - the users whose stakes are being updated.
+     * @param amounts - the amounts to set the associated user's stake to.
+     * @dev this will claim any existing rewards and reset timers.
+     */
+    function manuallyUpdateBulkStakes(
+        address[] calldata users,
+        uint128[] calldata amounts
+    ) external onlyOwnerOrDeveloper {
+        for (uint256 i = 0; i < users.length; i++) {
+            manuallyUpdateStake(users[i], amounts[i]);
+        }
+    }
+
+    /**
      * Sets/updates the bonus for claiming for the first time.
      * @param _bonus - the new bonus
      */
@@ -300,7 +330,7 @@ contract GACStakingChild is FxBaseChildTunnel, Ownable, DeveloperAccess {
 
         uint256 reward = periodicYield * periodsPassed;
         if (reward != 0 && !stake.hasClaimed) reward += firstTimeBonus;
-        
+
         return reward;
     }
 
