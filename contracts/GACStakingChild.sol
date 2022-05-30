@@ -136,9 +136,7 @@ contract GACStakingChild is FxBaseChildTunnel, Ownable, DeveloperAccess {
         public
         onlyOwnerOrDeveloper
     {
-        _updateBalance(user);
-
-        stakes[user].amount = amount;
+        _manuallyUpdateStake(user, amount);
     }
 
     /**
@@ -152,7 +150,7 @@ contract GACStakingChild is FxBaseChildTunnel, Ownable, DeveloperAccess {
         uint128[] calldata amounts
     ) external onlyOwnerOrDeveloper {
         for (uint256 i = 0; i < users.length; i++) {
-            manuallyUpdateStake(users[i], amounts[i]);
+            _manuallyUpdateStake(users[i], amounts[i]);
         }
     }
 
@@ -296,6 +294,18 @@ contract GACStakingChild is FxBaseChildTunnel, Ownable, DeveloperAccess {
         _updateBalance(user);
 
         stakes[user].amount -= amount;
+    }
+
+    /**
+     * A manual override functionality to allow an admit to update a user's stake.
+     * @param user - the user whose stake is being updated.
+     * @param amount - the amount to set the user's stake to.
+     * @dev this will claim any existing rewards and reset timers.
+     */
+    function _manuallyUpdateStake(address user, uint128 amount) internal {
+        _updateBalance(user);
+
+        stakes[user].amount = amount;
     }
 
     /**

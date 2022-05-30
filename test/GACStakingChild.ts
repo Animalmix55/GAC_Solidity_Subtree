@@ -502,6 +502,15 @@ contract('GACStakingChild', (accounts) => {
         let reward = await GACStakingInstance.getReward(accounts[1]);
         assert.equal(reward.toString(), web3.utils.toWei('1280'));
 
+        // fails if not owner/dev
+        await truffleAssert.reverts(
+            GACStakingInstance.manuallyUpdateBulkStakes(
+                [accounts[0], accounts[1]],
+                [11, 11]
+            ),
+            ErrorMessage.NotOwnerOrDev
+        );
+
         await GACStakingInstance.manuallyUpdateBulkStakes(
             [accounts[0], accounts[1]],
             [11, 11]
