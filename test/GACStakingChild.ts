@@ -506,7 +506,8 @@ contract('GACStakingChild', (accounts) => {
         await truffleAssert.reverts(
             GACStakingInstance.manuallyUpdateBulkStakes(
                 [accounts[0], accounts[1]],
-                [11, 11]
+                [11, 11],
+                { from: accounts[1] }
             ),
             ErrorMessage.NotOwnerOrDev
         );

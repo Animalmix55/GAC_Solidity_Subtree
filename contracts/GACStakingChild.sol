@@ -207,6 +207,8 @@ contract GACStakingChild is FxBaseChildTunnel, Ownable, DeveloperAccess {
 
     /**
      * Tricks collab.land and other ERC721 balance checkers into believing that the user has a balance.
+     * @dev a duplicate stakes(user).amount.
+     * @param user - the user to get the balance of.
      */
     function balanceOf(address user) external view returns (uint256) {
         return stakes[user].amount;
