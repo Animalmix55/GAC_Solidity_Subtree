@@ -67,6 +67,11 @@ const initialRewards: Record<number, BN> = {
     100: new BN(web3.utils.toWei('2235', 'ether')),
 };
 
+console.log(Object.keys(initialRewards));
+console.log(
+    Object.keys(initialRewards).map((k) => initialRewards[Number(k)].toString())
+);
+
 contract('GACStakingChild', (accounts) => {
     const getInstance = async (txDetails: Truffle.TransactionDetails) => {
         const devAddress = accounts[9];
